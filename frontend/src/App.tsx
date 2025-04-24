@@ -1,15 +1,18 @@
-import { useState } from 'react';
+// App.tsx
+import React, { useState } from 'react';
+import FileUpload from './components/FileUpload';
+import UploadResult from './components/UploadResult';
 
-function App() {
-    const [file, setFile] = useState(null);
+const App: React.FC = () => {
+    const [file, setFile] = useState<File | null>(null);
     const [uploading, setUploading] = useState(false);
-    const [response, setResponse] = useState(null);
+    const [response, setResponse] = useState<any>(null);
 
-    const handleFileChange = (e) => {
-        setFile(e.target.files[0]);
+    const handleFileSelect = (file: File) => {
+        setFile(file);
     };
 
-    const handleUpload = async (file) => {
+    const handleUpload = async () => {
         if (!file) {
             console.error("No file selected.");
             return;
@@ -43,31 +46,14 @@ function App() {
     };
 
     return (
-        <div style={{ padding: '2rem', fontFamily: 'sans-serif' }}>
-            <h1>Image Upload</h1>
-            <input type="file" onChange={handleFileChange} />
-            <button onClick={() => handleUpload(file)} disabled={uploading}>
-                {uploading ? 'Uploading...' : 'Upload'}
-            </button>
-            {response && (
-                <div style={{ marginTop: '1rem' }}>
-                    {/* Show the response */}
-                    <pre>{JSON.stringify(response, null, 2)}</pre>
-
-                    {/* Conditionally render the image if the URL exists */}
-                    {response.s3_url ? (
-                        <img
-                            src={response.s3_url}
-                            alt="Uploaded"
-                            style={{ maxWidth: '300px', marginTop: '1rem' }}
-                        />
-                    ) : (
-                        <p>Image failed to load or URL is missing.</p>
-                    )}
-                </div>
-            )}
+        <div className="min-h-screen bg-gray-50 flex flex-col justify-center items-center p-6">
+            <h1 className="text-4xl font-bold text-gray-800 mb-6">Image Upload</h1>
+            <div className="w-full max-w-lg">
+                <FileUpload onFileSelect={handleFileSelect} isUploading={uploading} onUpload={handleUpload} />
+                <UploadResult response={response} />
+            </div>
         </div>
     );
-}
+};
 
 export default App;
