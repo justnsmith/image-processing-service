@@ -1,59 +1,78 @@
-// App.tsx
-import React, { useState } from 'react';
-import FileUpload from './components/FileUpload';
-import UploadResult from './components/UploadResult';
+import { useState } from 'react';
+import DropZone from './components/DropZone';
+import ErrorMessage from './components/ErrorMessage';
+import ProgressBar from './components/ProgressBar';
 
-const App: React.FC = () => {
-    const [file, setFile] = useState<File | null>(null);
-    const [uploading, setUploading] = useState(false);
-    const [response, setResponse] = useState<any>(null);
+function App() {
+  const [, setFile] = useState<File | null>(null);
+  const [response, setResponse] = useState<any>(null);
+  const [error, setError] = useState<string | null>(null);
+  const [uploading, setUploading] = useState(false);
+  const [progress, setProgress] = useState(0);
 
-    const handleFileSelect = (file: File) => {
-        setFile(file);
-    };
+  const handleFileAccepted = (file: File) => {
+    setFile(file);
+    setError(null);
+    handleUpload(file);
+  };
 
-    const handleUpload = async () => {
-        if (!file) {
-            console.error("No file selected.");
-            return;
+  const handleUpload = async (file: File) => {
+    setUploading(true);
+    setProgress(0);
+    const formData = new FormData();
+    formData.append('file', file);
+
+    try {
+      const xhr = new XMLHttpRequest();
+      xhr.open('POST', 'http://localhost:8080/upload', true);
+
+      xhr.upload.onprogress = (event) => {
+        if (event.lengthComputable) {
+          const percent = Math.round((event.loaded / event.total) * 100);
+          setProgress(percent);
         }
+      };
 
-        setUploading(true);
+      xhr.onload = () => {
+        const res = JSON.parse(xhr.responseText);
+        setResponse(res);
+        setUploading(false);
+      };
 
-        const formData = new FormData();
-        formData.append('file', file);
+      xhr.onerror = () => {
+        setError("Upload failed due to a network error.");
+        setUploading(false);
+      };
 
-        try {
-            const res = await fetch('http://localhost:8080/upload', {
-                method: 'POST',
-                body: formData,
-            });
+      xhr.send(formData);
+    } catch (err: any) {
+      console.error(err);
+      setError("Something went wrong.");
+      setUploading(false);
+    }
+  };
 
-            const data = await res.json();
-            setResponse(data);
+  return (
+    <div className="p-8 font-sans max-w-xl mx-auto">
+      <h1 className="text-2xl font-bold mb-4 text-center">📤 Image Uploader</h1>
 
-            if (res.ok) {
-                console.log("Upload succeeded", data);
-            } else {
-                console.error("Upload failed", data);
-            }
-        } catch (err) {
-            console.error("Request failed", err);
-            setResponse({ error: "Request failed" });
-        } finally {
-            setUploading(false);
-        }
-    };
+      <DropZone onFileAccepted={handleFileAccepted} onError={setError} />
 
-    return (
-        <div className="min-h-screen bg-gray-50 flex flex-col justify-center items-center p-6">
-            <h1 className="text-4xl font-bold text-gray-800 mb-6">Image Upload</h1>
-            <div className="w-full max-w-lg">
-                <FileUpload onFileSelect={handleFileSelect} isUploading={uploading} onUpload={handleUpload} />
-                <UploadResult response={response} />
-            </div>
+      {uploading && <ProgressBar progress={progress} />}
+      {error && <ErrorMessage message={error} />}
+
+      {response?.s3_url && (
+        <div className="mt-6 text-center">
+          <img
+            src={response.s3_url}
+            alt="Uploaded"
+            className="max-w-full max-h-96 rounded border mt-4"
+          />
+          <p className="text-green-700 mt-2">Upload successful!</p>
         </div>
-    );
-};
+      )}
+    </div>
+  );
+}
 
 export default App;
