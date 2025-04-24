@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"log"
 
-	//"net/http"
 	"os"
 
 	"image-processing-service/internal/handler"
@@ -36,7 +35,7 @@ func main() {
 	router := gin.Default()
 
 	// Routes
-	router.POST("/upload", handler.UploadHandler)
+	router.POST("/upload", handler.UploadImageHandler)
 
 	// Start server
 	log.Println("Server started on :8080")
