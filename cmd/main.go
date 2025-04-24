@@ -35,7 +35,9 @@ func main() {
 	router := gin.Default()
 
 	// Routes
-	router.POST("/upload", handler.UploadImageHandler)
+	router.POST("/upload", func(c *gin.Context) {
+		handler.UploadImageHandler(c, db)
+	})
 
 	// Start server
 	log.Println("Server started on :8080")
