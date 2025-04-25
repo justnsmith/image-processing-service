@@ -21,7 +21,8 @@ import (
 	"github.com/jackc/pgx/v4"
 )
 
-func UploadImageHandler(c *gin.Context, conn *pgx.Conn) {
+// UploadImageHandler handles image uploads, processing, and task queuing.
+func UploadImageHandler(c *gin.Context, conn *pgx.Conn, userID string) {
 	// Get the uploaded file from the request
 	fileHeader, err := c.FormFile("file")
 	if err != nil {
@@ -125,6 +126,7 @@ func UploadImageHandler(c *gin.Context, conn *pgx.Conn) {
 		ContentType: contentType,
 		Width:       width,
 		Height:      height,
+		UserID:      userID,
 	}
 
 	// Insert resized image metadata into the database
