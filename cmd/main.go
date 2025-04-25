@@ -5,8 +5,8 @@ import (
     "fmt"
     "log"
     "os"
-
     "image-processing-service/internal/handler"
+    "image-processing-service/internal/worker"
     "github.com/gin-gonic/gin"
     "github.com/gin-contrib/cors"
     "github.com/jackc/pgx/v4"
@@ -40,6 +40,9 @@ func main() {
     router.POST("/upload", func(c *gin.Context) {
         handler.UploadImageHandler(c, db)
     })
+
+    // Start the worker in a separate Go routine
+    go worker.StartWorker(context.Background(), db)
 
     // Start server
     log.Println("Server started on :8080")
