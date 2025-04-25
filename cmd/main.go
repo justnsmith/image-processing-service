@@ -34,7 +34,7 @@ func main() {
     router := gin.Default()
 
     // Enable CORS middleware
-    router.Use(cors.Default()) // Allow all origins
+    router.Use(cors.Default())
 
     // Routes
     router.POST("/upload", func(c *gin.Context) {
