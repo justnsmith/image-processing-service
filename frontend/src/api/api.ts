@@ -98,3 +98,15 @@ export const uploadImage = async (file: File, params?: { width?: number, cropX?:
 
   return response.json();
 };
+
+export const deleteImage = async (imageId: string): Promise<void> => {
+    const response = await fetch(`${API_URL}/images/${imageId}`, {
+      method: 'DELETE',
+      headers: authHeaders(),
+    });
+
+    if (!response.ok) {
+      const error = await response.json();
+      throw new Error(error.error || 'Failed to delete image');
+    }
+};

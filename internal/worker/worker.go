@@ -44,32 +44,57 @@ func StartWorker(ctx context.Context, conn *pgx.Conn) {
 }
 
 func processTask(task string, conn *pgx.Conn) {
-	// Extract task data (split by colon)
-	parts := strings.SplitN(task, ":", 3)
-	if len(parts) < 2 {
-		log.Printf("Invalid task format: %s\n", task)
+	// First, identify the position of the JSON object by finding the first '{'
+	jsonStartPos := strings.Index(task, "{")
+	if jsonStartPos == -1 {
+		log.Printf("Invalid task format (no JSON found): %s\n", task)
 		return
 	}
 
-	imageKey := parts[1]
-	var options map[string]interface{}
+	// Find the position of the last '}'
+	jsonEndPos := strings.LastIndex(task, "}")
+	if jsonEndPos == -1 || jsonEndPos <= jsonStartPos {
+		log.Printf("Invalid task format (unbalanced JSON): %s\n", task)
+		return
+	}
 
-	// Parse options if provided
-	if len(parts) > 2 {
-		err := json.Unmarshal([]byte(parts[2]), &options)
-		if err != nil {
-			log.Printf("Error parsing options: %v\n", err)
-			// Continue with default options
-			options = map[string]interface{}{
-				"resize": map[string]int{"width": 600},
-			}
-		}
-	} else {
-		// Set default options if none provided
+	// Extract the parts before the JSON
+	prefix := task[:jsonStartPos]
+	prefixParts := strings.Split(prefix, ":")
+	if len(prefixParts) < 2 {
+		log.Printf("Invalid task prefix: %s\n", prefix)
+		return
+	}
+
+	// Extract the command and image key
+	command := prefixParts[0]
+	imageKey := prefixParts[1]
+
+	// Extract the JSON options string
+	jsonStr := task[jsonStartPos : jsonEndPos+1]
+
+	// Extract userID (everything after the JSON)
+	userID := ""
+	if jsonEndPos+2 < len(task) {
+		userIDPart := task[jsonEndPos+2:] // +2 to skip the '}' and ':'
+		// Remove any leading colon that might be present
+		userID = strings.TrimPrefix(userIDPart, ":")
+	}
+
+	// Parse the JSON options
+	var options map[string]interface{}
+	err := json.Unmarshal([]byte(jsonStr), &options)
+	if err != nil {
+		log.Printf("Error parsing options: %v\n", err)
+		// Continue with default options
 		options = map[string]interface{}{
 			"resize": map[string]int{"width": 600},
 		}
 	}
+
+	// Debug output
+	log.Printf("Parsed task - Command: %s, ImageKey: %s, UserID: %s\n",
+		command, imageKey, userID)
 
 	// Download the image from S3
 	imgBuf, err := storage.DownloadFromS3(context.Background(), imageKey)
@@ -90,32 +115,10 @@ func processTask(task string, conn *pgx.Conn) {
 
 	// Apply crop if specified
 	if cropInterface, ok := options["crop"].(map[string]interface{}); ok {
-		// Extract crop parameters, handling potential type conversions
-		var x, y, width, height int
-
-		if val, ok := cropInterface["x"].(float64); ok {
-			x = int(val)
-		} else if val, ok := cropInterface["x"].(int); ok {
-			x = val
-		}
-
-		if val, ok := cropInterface["y"].(float64); ok {
-			y = int(val)
-		} else if val, ok := cropInterface["y"].(int); ok {
-			y = val
-		}
-
-		if val, ok := cropInterface["width"].(float64); ok {
-			width = int(val)
-		} else if val, ok := cropInterface["width"].(int); ok {
-			width = val
-		}
-
-		if val, ok := cropInterface["height"].(float64); ok {
-			height = int(val)
-		} else if val, ok := cropInterface["height"].(int); ok {
-			height = val
-		}
+		x := getIntFromMap(cropInterface, "x")
+		y := getIntFromMap(cropInterface, "y")
+		width := getIntFromMap(cropInterface, "width")
+		height := getIntFromMap(cropInterface, "height")
 
 		if width > 0 && height > 0 {
 			processedImg = processor.CropImage(processedImg, x, y, width, height)
@@ -125,18 +128,13 @@ func processTask(task string, conn *pgx.Conn) {
 
 	// Apply resize if specified
 	if resizeInterface, ok := options["resize"].(map[string]interface{}); ok {
-		var width int = 600 // Default width
-
-		if val, ok := resizeInterface["width"].(float64); ok {
-			width = int(val)
-		} else if val, ok := resizeInterface["width"].(int); ok {
-			width = val
+		width := getIntFromMap(resizeInterface, "width")
+		if width <= 0 {
+			width = 600 // Default width
 		}
 
-		if width > 0 {
-			processedImg = processor.ResizeImage(processedImg, uint(width))
-			log.Printf("Applied resizing: width=%d\n", width)
-		}
+		processedImg = processor.ResizeImage(processedImg, uint(width))
+		log.Printf("Applied resizing: width=%d\n", width)
 	}
 
 	// Apply tint if specified
@@ -165,15 +163,35 @@ func processTask(task string, conn *pgx.Conn) {
 		return
 	}
 
+	var originalMeta db.ImageMeta
+
+	// If we have the userID directly from the task, use it
+	if userID != "" {
+		originalMeta = db.ImageMeta{
+			UserID: userID,
+		}
+	} else {
+		// Fallback to database lookup if userID wasn't in the task
+		originalMeta, err = db.GetImageMetaByFileName(context.Background(), conn, imageKey)
+		if err != nil {
+			log.Printf("Error retrieving original image metadata: %v\n", err)
+			// Create an empty metadata object with a placeholder userID if lookup fails
+			originalMeta = db.ImageMeta{
+				UserID: "unknown",
+			}
+		}
+	}
+
 	// Update the image metadata in the database
 	meta := db.ImageMeta{
-		FileName:    imageKey,
+		FileName:    processedKey,
 		URL:         url,
 		Size:        int64(len(processedImgBuf)),
 		Uploaded:    time.Now(),
 		ContentType: "image/jpeg",
 		Width:       processedImg.Bounds().Dx(),
 		Height:      processedImg.Bounds().Dy(),
+		UserID:      originalMeta.UserID, // Use the UserID we determined
 	}
 
 	// Insert updated metadata into the database
@@ -183,5 +201,15 @@ func processTask(task string, conn *pgx.Conn) {
 		return
 	}
 
-	log.Printf("Processed and uploaded image: %s\n", imageKey)
+	log.Printf("Processed and uploaded image: %s\n", processedKey)
+}
+
+// Helper function to extract integers from map with different possible types
+func getIntFromMap(m map[string]interface{}, key string) int {
+	if val, ok := m[key].(float64); ok {
+		return int(val)
+	} else if val, ok := m[key].(int); ok {
+		return val
+	}
+	return 0
 }

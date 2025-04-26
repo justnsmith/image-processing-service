@@ -1,77 +1,76 @@
-// src/pages/Dashboard.tsx
-import React, { useEffect, useState } from 'react';
-import { Header } from '../components/layout/Header';
-import { Footer } from '../components/layout/Footer';
-import { ImageGrid } from '../components/dashboard/ImageGrid';
+import React, { useState, useEffect } from 'react';
 import { ImageUploader } from '../components/dashboard/ImageUploader';
+import { ImageGrid } from '../components/dashboard/ImageGrid';
 import { getUserImages } from '../api/api';
 import { ImageMeta } from '../types';
-import { Modal } from '../components/ui/Modal';
-import { Button } from '../components/ui/Button';
 
 const Dashboard: React.FC = () => {
-    const [images, setImages] = useState<ImageMeta[]>([]);
-    const [isLoading, setIsLoading] = useState<boolean>(true);
-    const [error, setError] = useState<string | null>(null);
-    const [showUploadModal, setShowUploadModal] = useState<boolean>(false);
-    // We can keep this for future use or remove if not needed
-    // const { user } = useAuth();
+  const [images, setImages] = useState<ImageMeta[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [refreshTrigger, setRefreshTrigger] = useState(0);
 
-    const fetchImages = async () => {
-        try {
-            setIsLoading(true);
-            setError(null);
-            const response = await getUserImages();
-            setImages(response.images);
-        } catch (err) {
-            setError('Failed to load images. Please try again later.');
-            console.error(err);
-        } finally {
-            setIsLoading(false);
-        }
-    };
+  useEffect(() => {
+    loadImages();
+  }, [refreshTrigger]);
 
-    useEffect(() => {
-        fetchImages();
-    }, []);
+  const loadImages = async () => {
+    try {
+      setIsLoading(true);
+      const response = await getUserImages();
+      setImages(response.images);
+    } catch (error) {
+      console.error('Failed to load images:', error);
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
-    const handleImageUpload = () => {
-        // Refetch images after successful upload
-        fetchImages();
-        // Close the modal
-        setShowUploadModal(false);
-    };
+  // Handler for when a new image is uploaded
+  const handleUploadSuccess = (newImage: ImageMeta) => {
+    // Add the new image to the start of the images array
+    setImages([newImage, ...images]);
+  };
 
-    return (
-        <>
-            <Header />
-            <main className="page">
-                <div className="container">
-                    <div className="dashboard-header">
-                        <h1>My Images</h1>
-                        <Button onClick={() => setShowUploadModal(true)}>Upload New Image</Button>
-                    </div>
+  // Handler for when an image is deleted
+  const handleImageDelete = (imageId: string) => {
+    setImages(images.filter(image => image.id !== imageId));
+  };
 
-                    {error && <div className="error">{error}</div>}
+  // Function to refresh images from the server
+  const refreshImages = () => {
+    setRefreshTrigger(prev => prev + 1);
+  };
 
-                    {/* Handling loading state in the component itself */}
-                    <ImageGrid
-                        images={images}
-                        isLoading={isLoading}
-                    />
+  return (
+    <div className="container mx-auto px-4 py-8">
+      <div className="flex justify-between items-center mb-6">
+        <h1 className="text-2xl font-bold">Your Dashboard</h1>
+        <button
+          onClick={refreshImages}
+          className="text-blue-600 hover:text-blue-800 font-medium flex items-center"
+        >
+          <svg className="w-5 h-5 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path>
+          </svg>
+          Refresh
+        </button>
+      </div>
 
-                    <Modal
-                        isOpen={showUploadModal}
-                        onClose={() => setShowUploadModal(false)}
-                        title="Upload Image"
-                    >
-                        <ImageUploader onUploadSuccess={handleImageUpload} />
-                    </Modal>
-                </div>
-            </main>
-            <Footer />
-        </>
-    );
+      <ImageUploader onUploadSuccess={handleUploadSuccess} />
+
+      <div className="bg-white rounded-lg shadow-md p-6 mb-6">
+        <div className="flex justify-between items-center mb-4">
+          <h2 className="text-xl font-semibold">Your Images</h2>
+          <span className="text-sm text-gray-500">{images.length} image{images.length !== 1 ? 's' : ''}</span>
+        </div>
+        <ImageGrid
+          images={images}
+          isLoading={isLoading}
+          onImageDelete={handleImageDelete}
+        />
+      </div>
+    </div>
+  );
 };
 
 export default Dashboard;

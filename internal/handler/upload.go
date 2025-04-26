@@ -3,11 +3,9 @@ package handler
 import (
 	"bytes"
 	"context"
-	"encoding/json"
 	"fmt"
 	"image-processing-service/internal/db"
 	"image-processing-service/internal/processor"
-	"image-processing-service/internal/queue"
 	"image-processing-service/internal/storage"
 	_ "image/gif"
 	_ "image/jpeg"
@@ -70,58 +68,62 @@ func UploadImageHandler(c *gin.Context, conn *pgx.Conn, userID string) {
 	// Get tint color
 	tintColor := c.PostForm("tintColor")
 
-	// Create a processing options object for the background task
-	procOptions := map[string]interface{}{
-		"resize": map[string]int{"width": 600},
+	// Check if we have any modifications
+	hasModifications := width != img.Bounds().Dx() ||
+		(cropWidth > 0 && cropHeight > 0) ||
+		tintColor != ""
+
+	// If no modifications, don't process further
+	if !hasModifications {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "No image modifications specified"})
+		return
 	}
 
-	// Add crop parameters if provided
+	// Process the image with the requested modifications
+	processedImg := processor.ResizeImage(img, uint(width))
+
+	// Apply crop if specified
 	if cropWidth > 0 && cropHeight > 0 {
-		procOptions["crop"] = map[string]int{
-			"x":      cropX,
-			"y":      cropY,
-			"width":  cropWidth,
-			"height": cropHeight,
+		processedImg = processor.CropImage(processedImg, cropX, cropY, cropWidth, cropHeight)
+	}
+
+	// Apply tint if specified
+	if tintColor != "" {
+		tintColor, err := processor.ParseHexColor(tintColor)
+		if err == nil {
+			processedImg = processor.AddTint(processedImg, tintColor)
 		}
 	}
 
-	// Add tint if provided
-	if tintColor != "" {
-		procOptions["tint"] = tintColor
-	}
-
-	// Resize the image for immediate preview using user-specified width
-	resizedImg := processor.ResizeImage(img, uint(width))
-
-	// Compress resized image
-	resizedImgBuf, err := processor.CompressJPEG(resizedImg, 85)
+	// Compress processed image
+	processedImgBuf, err := processor.CompressJPEG(processedImg, 85)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to compress image"})
 		return
 	}
 
-	// Unique S3 object name for the resized image
-	key := fmt.Sprintf("images/img_%d_resized%s", time.Now().Unix(), filepath.Ext(fileHeader.Filename))
+	// Unique S3 object name for the processed image
+	key := fmt.Sprintf("images/img_%d_processed%s", time.Now().Unix(), filepath.Ext(fileHeader.Filename))
 
-	// Upload resized image to S3
-	url, err := storage.UploadToS3(context.Background(), key, resizedImgBuf)
+	// Upload processed image to S3
+	url, err := storage.UploadToS3(context.Background(), key, processedImgBuf)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "S3 upload failed"})
 		return
 	}
 
-	// Get content type for resized image
-	contentType := http.DetectContentType(resizedImgBuf)
+	// Get content type for processed image
+	contentType := http.DetectContentType(processedImgBuf)
 
-	// Get new dimensions of the resized image
-	width = resizedImg.Bounds().Dx()
-	height := resizedImg.Bounds().Dy()
+	// Get dimensions of the processed image
+	width = processedImg.Bounds().Dx()
+	height := processedImg.Bounds().Dy()
 
-	// Create metadata object for resized image
+	// Create metadata object for processed image
 	meta := db.ImageMeta{
 		FileName:    fileHeader.Filename,
 		URL:         url,
-		Size:        fileHeader.Size,
+		Size:        int64(len(processedImgBuf)),
 		Uploaded:    time.Now(),
 		ContentType: contentType,
 		Width:       width,
@@ -129,31 +131,16 @@ func UploadImageHandler(c *gin.Context, conn *pgx.Conn, userID string) {
 		UserID:      userID,
 	}
 
-	// Insert resized image metadata into the database
+	// Insert processed image metadata into the database
 	err = db.InsertImageMeta(context.Background(), conn, meta)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "DB insert failed"})
 		return
 	}
 
-	// Convert processing options to JSON
-	optionsJSON, err := json.Marshal(procOptions)
-	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to encode processing options"})
-		return
-	}
-
-	// Enqueue the image processing task for the worker with options
-	task := fmt.Sprintf("process_image:%s:%s", key, string(optionsJSON))
-	err = queue.EnqueueTask(context.Background(), task)
-	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to enqueue task"})
-		return
-	}
-
 	// Return success response with the S3 URL and metadata
 	c.JSON(http.StatusOK, gin.H{
-		"message":    "Uploaded resized image to S3, saved metadata, and task enqueued for processing",
+		"message":    "Uploaded processed image to S3 and saved metadata",
 		"s3_url":     url,
 		"stored_key": key,
 		"width":      width,
