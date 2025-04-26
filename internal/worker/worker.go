@@ -2,6 +2,7 @@ package worker
 
 import (
 	"context"
+	"encoding/base64"
 	"encoding/json"
 	"fmt"
 	"image-processing-service/internal/db"
@@ -49,7 +50,7 @@ func StartWorker(ctx context.Context) {
 }
 
 func processImageTask(ctx context.Context, task string) {
-	// Parse task parts: command:imageKey:JSON:userID
+	// Parse task parts: command:imageKey:Base64JSON:userID
 	parts := strings.SplitN(task, ":", 4)
 	if len(parts) < 4 {
 		log.Printf("Invalid task format: %s\n", task)
@@ -58,7 +59,7 @@ func processImageTask(ctx context.Context, task string) {
 
 	command := parts[0]
 	imageKey := parts[1]
-	jsonOptions := parts[2]
+	encodedOptions := parts[2]
 	userID := parts[3]
 
 	// Only process "process" commands
@@ -67,9 +68,16 @@ func processImageTask(ctx context.Context, task string) {
 		return
 	}
 
+	// Decode the Base64 JSON options
+	jsonBytes, err := base64.StdEncoding.DecodeString(encodedOptions)
+	if err != nil {
+		log.Printf("Error decoding options: %v\n", err)
+		return
+	}
+
 	// Parse the JSON options
 	var options map[string]interface{}
-	err := json.Unmarshal([]byte(jsonOptions), &options)
+	err = json.Unmarshal(jsonBytes, &options)
 	if err != nil {
 		log.Printf("Error parsing options: %v\n", err)
 		return

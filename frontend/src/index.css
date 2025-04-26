@@ -37,7 +37,7 @@
   .aspect-h-3 {
     --tw-aspect-h: 3;
   }
- 
+
   .aspect-w-4 > * {
     position: absolute;
     height: 100%;

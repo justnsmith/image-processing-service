@@ -44,7 +44,7 @@ export const ImageGrid: React.FC<ImageGridProps> = ({ images, isLoading, onImage
     );
   }
 
-  if (images.length === 0) {
+  if (!images || images.length === 0) {
     return (
       <div className="text-center py-12 bg-white rounded-lg shadow-md">
         <div className="flex flex-col items-center">
@@ -57,6 +57,29 @@ export const ImageGrid: React.FC<ImageGridProps> = ({ images, isLoading, onImage
     );
   }
 
+  // Display status badge based on processing status
+  const getStatusBadge = (image: ImageMeta) => {
+    if (!image.processing_status) return null;
+
+    const statusStyles = {
+      pending: "bg-yellow-100 text-yellow-800",
+      completed: "bg-green-100 text-green-800",
+      failed: "bg-red-100 text-red-800"
+    };
+
+    const statusText = {
+      pending: "Processing",
+      completed: "Processed",
+      failed: "Failed"
+    };
+
+    return (
+      <span className={`px-2 py-1 text-xs font-medium rounded-full ${statusStyles[image.processing_status]}`}>
+        {statusText[image.processing_status]}
+      </span>
+    );
+  };
+
   return (
     <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
       {images.map((image) => (
@@ -67,13 +90,14 @@ export const ImageGrid: React.FC<ImageGridProps> = ({ images, isLoading, onImage
           }`}
         >
           <div
-            className="aspect-w-4 aspect-h-3 bg-gray-100 cursor-pointer relative overflow-hidden"
+            className="relative overflow-hidden cursor-pointer"
+            style={{ paddingBottom: '75%' }} // 4:3 aspect ratio
             onClick={() => toggleImageExpansion(image.id)}
           >
             <img
               src={image.url}
               alt={image.file_name}
-              className={`object-cover w-full h-full transition-transform duration-300 ${
+              className={`absolute top-0 left-0 w-full h-full object-cover transition-transform duration-300 ${
                 expandedImageId === image.id ? 'scale-110' : ''
               }`}
             />
@@ -92,12 +116,37 @@ export const ImageGrid: React.FC<ImageGridProps> = ({ images, isLoading, onImage
             )}
           </div>
           <div className="p-4">
-            <h3 className="font-medium text-gray-800 truncate">{image.file_name}</h3>
+            <div className="flex justify-between items-center mb-2">
+              <h3 className="font-medium text-gray-800 truncate">{image.file_name}</h3>
+              {getStatusBadge(image)}
+            </div>
+
             <div className="mt-2 text-sm text-gray-500">
               <p>{new Date(image.uploaded).toLocaleDateString()}</p>
               <p>{`${image.width} × ${image.height} px`}</p>
               <p>{formatFileSize(image.size)}</p>
             </div>
+
+            {image.processed_url && (
+              <div className="mt-3 border-t pt-3">
+                <p className="text-sm font-medium text-gray-700 mb-2">Processed Version:</p>
+                <div className="relative" style={{ paddingBottom: '75%' }}>
+                  <img
+                    src={image.processed_url}
+                    alt={`Processed ${image.file_name}`}
+                    className="absolute top-0 left-0 w-full h-full object-cover rounded"
+                  />
+                </div>
+                <a
+                  href={image.processed_url}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="mt-2 block text-blue-600 text-sm"
+                >
+                  View Processed Image
+                </a>
+              </div>
+            )}
 
             <div className="mt-4 flex justify-end">
               <button

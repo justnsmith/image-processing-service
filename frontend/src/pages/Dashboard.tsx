@@ -1,76 +1,131 @@
 import React, { useState, useEffect } from 'react';
+import { getUserImages, getImageStatus } from '../api/api';
 import { ImageUploader } from '../components/dashboard/ImageUploader';
 import { ImageGrid } from '../components/dashboard/ImageGrid';
-import { getUserImages } from '../api/api';
 import { ImageMeta } from '../types';
 
 const Dashboard: React.FC = () => {
-  const [images, setImages] = useState<ImageMeta[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
-  const [refreshTrigger, setRefreshTrigger] = useState(0);
+    const [images, setImages] = useState<ImageMeta[]>([]);
+    const [isLoading, setIsLoading] = useState(true);
 
-  useEffect(() => {
-    loadImages();
-  }, [refreshTrigger]);
+    // Load initial images
+    useEffect(() => {
+        const fetchImages = async () => {
+            try {
+                setIsLoading(true);
+                const response = await getUserImages();
+                setImages(response.images);
+            } catch (error) {
+                console.error('Failed to fetch images:', error);
+            } finally {
+                setIsLoading(false);
+            }
+        };
 
-  const loadImages = async () => {
-    try {
-      setIsLoading(true);
-      const response = await getUserImages();
-      setImages(response.images);
-    } catch (error) {
-      console.error('Failed to load images:', error);
-    } finally {
-      setIsLoading(false);
-    }
-  };
+        fetchImages();
+    }, []);
 
-  // Handler for when a new image is uploaded
-  const handleUploadSuccess = (newImage: ImageMeta) => {
-    // Add the new image to the start of the images array
-    setImages([newImage, ...images]);
-  };
+    // Set up polling for pending images
+    useEffect(() => {
+        const pendingImages = images.filter(img => img.processing_status === 'pending');
 
-  // Handler for when an image is deleted
-  const handleImageDelete = (imageId: string) => {
-    setImages(images.filter(image => image.id !== imageId));
-  };
+        if (pendingImages.length === 0) {
+            return;
+        }
 
-  // Function to refresh images from the server
-  const refreshImages = () => {
-    setRefreshTrigger(prev => prev + 1);
-  };
+        console.log("Pending images found:", pendingImages.length);
 
-  return (
-    <div className="container mx-auto px-4 py-8">
-      <div className="flex justify-between items-center mb-6">
-        <h1 className="text-2xl font-bold">Your Dashboard</h1>
-        <button
-          onClick={refreshImages}
-          className="text-blue-600 hover:text-blue-800 font-medium flex items-center"
-        >
-          <svg className="w-5 h-5 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path>
-          </svg>
-          Refresh
-        </button>
-      </div>
+        const intervalId = window.setInterval(async () => {
+            for (const image of pendingImages) {
+                try {
+                    // Use image.id consistently
+                    const status = await getImageStatus(image.id);
 
-      <ImageUploader onUploadSuccess={handleUploadSuccess} />
+                    if (status.status === 'completed' || status.status === 'failed') {
+                        setImages(prevImages =>
+                            prevImages.map(img =>
+                                img.id === image.id
+                                    ? {
+                                        ...img,
+                                        processing_status: status.status as 'completed' | 'failed',
+                                        processed_url: status.processed_url
+                                    } as ImageMeta
+                                    : img
+                            )
+                        );
+                    }
+                } catch (error) {
+                    console.error(`Failed to check status for image ${image.id}:`, error);
+                }
+            }
+        }, 3000);
 
-      <div className="bg-white rounded-lg shadow-md p-6 mb-6">
-        <div className="flex justify-between items-center mb-4">
-          <h2 className="text-xl font-semibold">Your Images</h2>
-          <span className="text-sm text-gray-500">{images.length} image{images.length !== 1 ? 's' : ''}</span>
+        return () => {
+            clearInterval(intervalId);
+        };
+    }, [JSON.stringify(images.filter(img => img.processing_status === 'pending').map(img => img.id))]);
+
+    const handleImageUpload = async (newImage: ImageMeta) => {
+        console.log("New image uploaded:", newImage);
+        setImages(prev => [newImage, ...prev]);
+
+        // If this is a processed image, start checking status immediately
+        if (newImage.processing_status === 'pending') {
+            console.log("Starting immediate status check for new image");
+            // Begin checking status immediately
+            const checkStatus = async () => {
+                try {
+                    // Use image.id consistently
+                    const status = await getImageStatus(newImage.id);
+                    if (status.status === 'completed' || status.status === 'failed') {
+                        setImages(prev =>
+                            prev.map(img =>
+                                img.id === newImage.id
+                                    ? { ...img, processing_status: status.status, processed_url: status.processed_url } as ImageMeta
+                                    : img
+                            )
+                        );
+                        return true; // Status updated
+                    }
+                    return false; // Still pending
+                } catch (error) {
+                    console.error("Error checking image status:", error);
+                    return false;
+                }
+            };
+
+            const quickCheck = async () => {
+                for (let i = 0; i < 5; i++) {
+                    await new Promise(resolve => setTimeout(resolve, 1000));
+                    const done = await checkStatus();
+                    if (done) break;
+                }
+            };
+
+            quickCheck();
+        }
+    };
+
+    const handleImageDelete = (id: string) => {
+        setImages(prev => prev.filter(img => img.id !== id));
+    };
+
+    return (
+        <div className="container mx-auto px-4 py-8">
+            <h1 className="text-3xl font-bold mb-8">Image Dashboard</h1>
+
+            <ImageUploader onUploadSuccess={handleImageUpload} />
+
+            <div className="mt-8">
+                <h2 className="text-2xl font-semibold mb-4">Your Images</h2>
+                <ImageGrid
+                    images={images}
+                    isLoading={isLoading}
+                    onImageDelete={handleImageDelete}
+                />
+            </div>
         </div>
-        <ImageGrid
-          images={images}
-          isLoading={isLoading}
-          onImageDelete={handleImageDelete}
-        />
-      </div>
-    </div>
-  );
+    );
 };
 
 export default Dashboard;

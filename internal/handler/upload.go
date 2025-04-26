@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
+	"encoding/base64"
 	"fmt"
 	"image-processing-service/internal/db"
 	"image-processing-service/internal/models"
@@ -134,8 +135,9 @@ func UploadImageHandler(c *gin.Context, userID string) {
 		return
 	}
 
-	// Create task for the queue
-	task := fmt.Sprintf("process:%s:%s:%s", originalKey, string(optionsJSON), userID)
+	// Create task for the queue - Base64 encode the JSON to avoid delimiter issues
+	encodedOptions := base64.StdEncoding.EncodeToString(optionsJSON)
+	task := fmt.Sprintf("process:%s:%s:%s", originalKey, encodedOptions, userID)
 
 	// Queue the processing task
 	err = queue.EnqueueTask(context.Background(), task)
@@ -146,12 +148,12 @@ func UploadImageHandler(c *gin.Context, userID string) {
 
 	// Return success response with the original S3 URL and metadata
 	c.JSON(http.StatusOK, gin.H{
-		"message":       "Image uploaded and queued for processing",
-		"id":            imageID,
-		"original_url":  originalURL,
-		"stored_key":    originalKey,
-		"width":         originalImg.Bounds().Dx(),
-		"height":        originalImg.Bounds().Dy(),
-		"status":        "pending",
+		"message":      "Image uploaded and queued for processing",
+		"id":           imageID,
+		"original_url": originalURL,
+		"stored_key":   originalKey,
+		"width":        originalImg.Bounds().Dx(),
+		"height":       originalImg.Bounds().Dy(),
+		"status":       "pending",
 	})
 }
