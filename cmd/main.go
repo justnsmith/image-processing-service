@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"log"
 	"os"
-
+	"image-processing-service/internal/db"
 	"image-processing-service/internal/handler"
 	"image-processing-service/internal/worker"
 
@@ -32,6 +32,12 @@ func main() {
 	defer dbConn.Close(context.Background())
 	log.Println("Connected to Postgres")
 
+	// Initialize database tables
+	err = db.InitDB()
+	if err != nil {
+		log.Printf("Warning: Database initialization error: %v", err)
+	}
+
 	// Set up Gin
 	router := gin.Default()
 
@@ -46,6 +52,10 @@ func main() {
 	authorized := router.Group("/")
 	authorized.Use(handler.AuthMiddleware())
 	{
+		// User profile routes
+		authorized.GET("/profile", handler.GetUserProfileHandler)
+		authorized.GET("/images", handler.GetUserImagesHandler)
+
 		// Route to upload image
 		authorized.POST("/upload", func(c *gin.Context) {
 			// Get userID from the JWT token in the context
@@ -54,7 +64,6 @@ func main() {
 				c.JSON(400, gin.H{"error": "UserID not found in context"})
 				return
 			}
-
 			// Handle the image upload
 			handler.UploadImageHandler(c, dbConn, userID.(string))
 		})
@@ -68,7 +77,6 @@ func main() {
 	if port == "" {
 		port = "8080" // Default port
 	}
-
 	log.Printf("Server started on :%s", port)
 	err = router.Run(":" + port)
 	if err != nil {
@@ -89,9 +97,17 @@ func connectToDB() (*pgx.Conn, error) {
 	dsn := fmt.Sprintf("postgres://%s:%s@%s:%s/%s?sslmode=%s",
 		user, password, host, port, dbname, sslmode,
 	)
+
 	conn, err := pgx.Connect(context.Background(), dsn)
 	if err != nil {
 		return nil, err
 	}
+
+	// Test the connection
+	err = conn.Ping(context.Background())
+	if err != nil {
+		return nil, err
+	}
+
 	return conn, nil
 }
