@@ -3,23 +3,22 @@ package db
 import (
 	"context"
 	"errors"
-	"fmt"
 	"image-processing-service/internal/models"
+
 	"github.com/jackc/pgx/v4"
-	"os"
 )
 
 // GetUserByEmail retrieves a user by their email from the database
 func GetUserByEmail(email string) (models.User, error) {
 	var user models.User
-	conn, err := connectToDB()
+
+	pool, err := GetDBPool()
 	if err != nil {
 		return user, err
 	}
-	defer conn.Close(context.Background())
 
 	query := "SELECT id, email, password FROM users WHERE email = $1"
-	err = conn.QueryRow(context.Background(), query, email).Scan(&user.ID, &user.Email, &user.Password)
+	err = pool.QueryRow(context.Background(), query, email).Scan(&user.ID, &user.Email, &user.Password)
 	if err != nil {
 		if err == pgx.ErrNoRows {
 			return user, errors.New("user not found")
@@ -31,15 +30,14 @@ func GetUserByEmail(email string) (models.User, error) {
 
 // CreateUser inserts a new user into the database and returns the generated ID
 func CreateUser(user models.User) (string, error) {
-	conn, err := connectToDB()
+	pool, err := GetDBPool()
 	if err != nil {
 		return "", err
 	}
-	defer conn.Close(context.Background())
 
 	var userID string
 	query := "INSERT INTO users (email, password) VALUES ($1, $2) RETURNING id"
-	err = conn.QueryRow(context.Background(), query, user.Email, user.Password).Scan(&userID)
+	err = pool.QueryRow(context.Background(), query, user.Email, user.Password).Scan(&userID)
 	if err != nil {
 		return "", err
 	}
@@ -49,14 +47,14 @@ func CreateUser(user models.User) (string, error) {
 // GetUserByID retrieves a user by their ID from the database
 func GetUserByID(userID string) (models.User, error) {
 	var user models.User
-	conn, err := connectToDB()
+
+	pool, err := GetDBPool()
 	if err != nil {
 		return user, err
 	}
-	defer conn.Close(context.Background())
 
 	query := "SELECT id, email FROM users WHERE id = $1"
-	err = conn.QueryRow(context.Background(), query, userID).Scan(&user.ID, &user.Email)
+	err = pool.QueryRow(context.Background(), query, userID).Scan(&user.ID, &user.Email)
 	if err != nil {
 		if err == pgx.ErrNoRows {
 			return user, errors.New("user not found")
@@ -69,16 +67,16 @@ func GetUserByID(userID string) (models.User, error) {
 // GetUserImages retrieves all images for a specific user
 func GetUserImages(userID string) ([]models.ImageMeta, error) {
 	var images []models.ImageMeta
-	conn, err := connectToDB()
+
+	pool, err := GetDBPool()
 	if err != nil {
 		return images, err
 	}
-	defer conn.Close(context.Background())
 
-	query := `SELECT id, file_name, url, size, uploaded, content_type, width, height
+	query := `SELECT id, file_name, url, s3_key, size, uploaded, content_type, width, height, status, processed_url
 	          FROM images WHERE user_id = $1 ORDER BY uploaded DESC`
 
-	rows, err := conn.Query(context.Background(), query, userID)
+	rows, err := pool.Query(context.Background(), query, userID)
 	if err != nil {
 		return images, err
 	}
@@ -86,8 +84,19 @@ func GetUserImages(userID string) ([]models.ImageMeta, error) {
 
 	for rows.Next() {
 		var img models.ImageMeta
-		err := rows.Scan(&img.ID, &img.FileName, &img.URL, &img.Size,
-		                &img.Uploaded, &img.ContentType, &img.Width, &img.Height)
+		err := rows.Scan(
+			&img.ID,
+			&img.FileName,
+			&img.URL,
+			&img.S3Key,
+			&img.Size,
+			&img.Uploaded,
+			&img.ContentType,
+			&img.Width,
+			&img.Height,
+			&img.Status,
+			&img.ProcessedURL,
+		)
 		if err != nil {
 			return images, err
 		}
@@ -102,20 +111,23 @@ func GetUserImages(userID string) ([]models.ImageMeta, error) {
 	return images, nil
 }
 
-// Connect to the PostgreSQL database
-func connectToDB() (*pgx.Conn, error) {
-	user := os.Getenv("POSTGRES_USER")
-	password := os.Getenv("POSTGRES_PASSWORD")
-	dbname := os.Getenv("POSTGRES_DB")
-	host := os.Getenv("POSTGRES_HOST")
-	port := os.Getenv("POSTGRES_PORT")
-	sslmode := os.Getenv("POSTGRES_SSLMODE")
-	dsn := fmt.Sprintf("postgres://%s:%s@%s:%s/%s?sslmode=%s",
-		user, password, host, port, dbname, sslmode,
-	)
-	conn, err := pgx.Connect(context.Background(), dsn)
+// VerifyImageOwnership checks if an image belongs to a specific user
+func VerifyImageOwnership(imageID string, userID string) (bool, error) {
+	var count int
+
+	pool, err := GetDBPool()
 	if err != nil {
-		return nil, err
+		return false, err
 	}
-	return conn, nil
+
+	err = pool.QueryRow(context.Background(),
+		`SELECT COUNT(*) FROM images WHERE id = $1 AND user_id = $2`,
+		imageID, userID,
+	).Scan(&count)
+
+	if err != nil {
+		return false, err
+	}
+
+	return count > 0, nil
 }

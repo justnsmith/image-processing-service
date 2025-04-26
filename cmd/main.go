@@ -2,7 +2,6 @@ package main
 
 import (
 	"context"
-	"fmt"
 	"image-processing-service/internal/db"
 	"image-processing-service/internal/handler"
 	"image-processing-service/internal/worker"
@@ -12,11 +11,8 @@ import (
 
 	"github.com/gin-contrib/cors"
 	"github.com/gin-gonic/gin"
-	"github.com/jackc/pgx/v4"
 	"github.com/joho/godotenv"
 )
-
-var dbConn *pgx.Conn
 
 func main() {
 	// Load .env file
@@ -25,12 +21,18 @@ func main() {
 		log.Println("No .env file found, proceeding with environment variables")
 	}
 
-	// Set up PostgreSQL connection
-	dbConn, err = connectToDB()
+	// Initialize database connection pool
+	pool, err := db.GetDBPool()
 	if err != nil {
 		log.Fatalf("DB connection error: %v", err)
 	}
-	defer dbConn.Close(context.Background())
+	defer db.CloseDBPool()
+
+	// Verify DB connection
+	err = pool.Ping(context.Background())
+	if err != nil {
+		log.Fatalf("DB ping error: %v", err)
+	}
 	log.Println("Connected to Postgres")
 
 	// Initialize database tables
@@ -64,6 +66,9 @@ func main() {
 		authorized.GET("/profile", handler.GetUserProfileHandler)
 		authorized.GET("/images", handler.GetUserImagesHandler)
 
+		// Image status endpoint
+		authorized.GET("/images/:id/status", handler.GetImageStatusHandler)
+
 		// Route to upload image
 		authorized.POST("/upload", func(c *gin.Context) {
 			// Get userID from the JWT token in the context
@@ -73,14 +78,15 @@ func main() {
 				return
 			}
 			// Handle the image upload
-			handler.UploadImageHandler(c, dbConn, userID.(string))
+			handler.UploadImageHandler(c, userID.(string))
 		})
 
+		// Delete image endpoint
 		authorized.DELETE("/images/:id", handler.DeleteImageHandler)
 	}
 
 	// Start worker in a separate Go routine to handle background tasks
-	go worker.StartWorker(context.Background(), dbConn)
+	go worker.StartWorker(context.Background())
 
 	// Start the server
 	port := os.Getenv("PORT")
@@ -92,32 +98,4 @@ func main() {
 	if err != nil {
 		log.Fatalf("Gin server error: %v", err)
 	}
-}
-
-// connectToDB establishes a connection to the PostgreSQL database
-func connectToDB() (*pgx.Conn, error) {
-	user := os.Getenv("POSTGRES_USER")
-	password := os.Getenv("POSTGRES_PASSWORD")
-	dbname := os.Getenv("POSTGRES_DB")
-	host := os.Getenv("POSTGRES_HOST")
-	port := os.Getenv("POSTGRES_PORT")
-	sslmode := os.Getenv("POSTGRES_SSLMODE")
-
-	// PostgreSQL connection string
-	dsn := fmt.Sprintf("postgres://%s:%s@%s:%s/%s?sslmode=%s",
-		user, password, host, port, dbname, sslmode,
-	)
-
-	conn, err := pgx.Connect(context.Background(), dsn)
-	if err != nil {
-		return nil, err
-	}
-
-	// Test the connection
-	err = conn.Ping(context.Background())
-	if err != nil {
-		return nil, err
-	}
-
-	return conn, nil
 }

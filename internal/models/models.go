@@ -23,13 +23,16 @@ type User struct {
 
 // ImageMeta represents metadata for an image
 type ImageMeta struct {
-	ID          string    `json:"id"`
-	FileName    string    `json:"file_name"`
-	URL         string    `json:"url"`
-	Size        int64     `json:"size"`
-	Uploaded    time.Time `json:"uploaded"`
-	ContentType string    `json:"content_type"`
-	Width       int       `json:"width"`
-	Height      int       `json:"height"`
-	UserID      string    `json:"user_id"`
+	ID           string    `json:"id"`
+	FileName     string    `json:"file_name"`
+	URL          string    `json:"url"`           // URL to original image
+	S3Key        string    `json:"s3_key"`        // S3 key for the original image
+	Size         int64     `json:"size"`
+	Uploaded     time.Time `json:"uploaded"`
+	ContentType  string    `json:"content_type"`
+	Width        int       `json:"width"`
+	Height       int       `json:"height"`
+	UserID       string    `json:"user_id"`
+	Status       string    `json:"status"`        // pending, processing, completed, failed
+	ProcessedURL string    `json:"processed_url"` // URL to processed image (if completed)
 }
