@@ -3,12 +3,13 @@ package main
 import (
 	"context"
 	"fmt"
-	"log"
-	"os"
-	"time"
 	"image-processing-service/internal/db"
 	"image-processing-service/internal/handler"
 	"image-processing-service/internal/worker"
+	"log"
+	"os"
+	"time"
+
 	"github.com/gin-contrib/cors"
 	"github.com/gin-gonic/gin"
 	"github.com/jackc/pgx/v4"
@@ -42,7 +43,6 @@ func main() {
 	router := gin.Default()
 
 	// Enable CORS middleware with custom configuration
-	// Replace the default CORS middleware with a more permissive one
 	router.Use(cors.New(cors.Config{
 		AllowOrigins:     []string{"http://localhost:3000", "http://localhost:5173"}, // Update with your frontend URLs
 		AllowMethods:     []string{"GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"},
@@ -75,6 +75,8 @@ func main() {
 			// Handle the image upload
 			handler.UploadImageHandler(c, dbConn, userID.(string))
 		})
+
+		authorized.DELETE("/images/:id", handler.DeleteImageHandler)
 	}
 
 	// Start worker in a separate Go routine to handle background tasks

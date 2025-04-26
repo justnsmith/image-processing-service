@@ -45,6 +45,27 @@ func LoginHandler(c *gin.Context) {
     })
 }
 
+func DeleteImageHandler(c *gin.Context) {
+    // Get userID from the JWT token in the context
+    userID, exists := c.Get("userID")
+    if !exists {
+        c.JSON(http.StatusUnauthorized, gin.H{"error": "User not authenticated"})
+        return
+    }
+
+    // Get the image ID from the URL parameter
+    imageID := c.Param("id")
+
+    // Delete the image from the database
+    err := db.DeleteImage(imageID, userID.(string))
+    if err != nil {
+        c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to delete image: " + err.Error()})
+        return
+    }
+
+    c.JSON(http.StatusOK, gin.H{"message": "Image deleted successfully"})
+}
+
 // RegisterHandler handles registration requests
 func RegisterHandler(c *gin.Context) {
     var registerRequest models.RegisterRequest
