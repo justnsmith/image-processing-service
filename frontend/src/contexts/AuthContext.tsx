@@ -1,15 +1,16 @@
 import React, { createContext, useContext, useEffect, useState } from 'react';
-import { User } from '../types';
+import { User, AuthResponse } from '../types';
 import { clearAuth, isAuthenticated, storeAuthData } from '../utils/storage';
-import { getUserProfile, login, register } from '../api/api';
+import { getUserProfile, login as apiLogin, register as apiRegister } from '../api/api';
 
 interface AuthContextType {
   user: User | null;
   isLoading: boolean;
   isAuthenticated: boolean;
-  login: (email: string, password: string) => Promise<void>;
-  register: (email: string, password: string) => Promise<void>;
+  login: (email: string, password: string) => Promise<AuthResponse>;
+  register: (email: string, password: string) => Promise<AuthResponse>;
   logout: () => void;
+  setAuthData: (token: string, userId: string, email: string) => void;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -40,16 +41,40 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       }
       setIsLoading(false);
     };
-
     initAuth();
   }, []);
 
-  const loginUser = async (email: string, password: string) => {
+  const loginUser = async (email: string, password: string): Promise<AuthResponse> => {
     try {
       setIsLoading(true);
-      const response = await login({ email, password });
+      // Normalize email to lowercase to avoid case sensitivity issues
+      const normalizedEmail = email.toLowerCase();
+      console.log(`Attempting login with normalized email: ${normalizedEmail}`);
+      const response = await apiLogin({ email: normalizedEmail, password });
+      console.log('Login successful, storing auth data');
       storeAuthData(response.token, response.user_id, response.email);
+      // Update the user state to trigger re-renders
       setUser({ id: response.user_id, email: response.email });
+      return response;
+    } catch (error) {
+      console.error('Login failed in AuthContext:', error);
+      throw error;
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const registerUser = async (email: string, password: string): Promise<AuthResponse> => {
+    try {
+      setIsLoading(true);
+      const response = await apiRegister({ email, password });
+      // Only store auth data if no email verification is required
+      // If verification is required, this should be skipped
+      if (response.token) {
+        storeAuthData(response.token, response.user_id, response.email);
+        setUser({ id: response.user_id, email: response.email });
+      }
+      return response; // Return the response so RegisterForm can check properties
     } catch (error) {
       throw error;
     } finally {
@@ -57,17 +82,10 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   };
 
-  const registerUser = async (email: string, password: string) => {
-    try {
-      setIsLoading(true);
-      const response = await register({ email, password });
-      storeAuthData(response.token, response.user_id, response.email);
-      setUser({ id: response.user_id, email: response.email });
-    } catch (error) {
-      throw error;
-    } finally {
-      setIsLoading(false);
-    }
+  // Add new function to set auth data directly
+  const setAuthDataDirectly = (token: string, userId: string, email: string) => {
+    storeAuthData(token, userId, email);
+    setUser({ id: userId, email: email });
   };
 
   const logout = () => {
@@ -84,6 +102,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         login: loginUser,
         register: registerUser,
         logout,
+        setAuthData: setAuthDataDirectly
       }}
     >
       {children}

@@ -19,6 +19,13 @@ require (
 )
 
 require (
+	github.com/jackc/pgx v3.6.2+incompatible // indirect
+	github.com/pkg/errors v0.8.1 // indirect
+	gopkg.in/alexcesaro/quotedprintable.v3 v3.0.0-20150716171945-2caba252f4dc // indirect
+	gopkg.in/gomail.v2 v2.0.0-20160411212932-81ebce5c23df // indirect
+)
+
+require (
 	github.com/aws/aws-sdk-go-v2/aws/protocol/eventstream v1.6.10 // indirect
 	github.com/aws/aws-sdk-go-v2/credentials v1.17.67 // direct
 	github.com/aws/aws-sdk-go-v2/feature/ec2/imds v1.16.30 // indirect

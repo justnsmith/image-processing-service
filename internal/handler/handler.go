@@ -1,10 +1,12 @@
 package handler
 
 import (
-	"context" // Added context import
+	"context"
+	"fmt"
 	"image-processing-service/internal/auth"
 	"image-processing-service/internal/db"
 	"image-processing-service/internal/models"
+	"image-processing-service/internal/utils"
 	"net/http"
 	"regexp"
 
@@ -14,58 +16,55 @@ import (
 
 // LoginHandler handles login requests
 func LoginHandler(c *gin.Context) {
-	var loginRequest models.LoginRequest
-	if err := c.ShouldBindJSON(&loginRequest); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid input"})
-		return
-	}
+    // Parse login request
+    var req models.LoginRequest
+    if err := c.ShouldBindJSON(&req); err != nil {
+        c.JSON(400, gin.H{"error": "Invalid request"})
+        return
+    }
 
-	// Check credentials
-	user, err := db.GetUserByEmail(loginRequest.Email)
-	if err != nil {
-		c.JSON(http.StatusUnauthorized, gin.H{"error": "Invalid credentials"})
-		return
-	}
+    // Log the login attempt
+    fmt.Printf("Login attempt for email: %s\n", req.Email)
 
-	// Verify password
-	if !auth.CheckPassword(user.Password, loginRequest.Password) {
-		c.JSON(http.StatusUnauthorized, gin.H{"error": "Invalid credentials"})
-		return
-	}
+    // Get user by email (the GetUserByEmail function now handles case insensitivity)
+    user, err := db.GetUserByEmail(req.Email)
+    if err != nil {
+        fmt.Printf("Login error: %v\n", err)
+        c.JSON(401, gin.H{"error": "Invalid email or password"})
+        return
+    }
 
-	// Generate JWT for the user
-	token, err := auth.GenerateJWT(user.ID)
-	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Could not generate token"})
-		return
-	}
+    // Check password
+    if !auth.CheckPassword(user.Password, req.Password) {
+        fmt.Printf("Password mismatch for user: %s\n", user.Email)
+        c.JSON(401, gin.H{"error": "Invalid email or password"})
+        return
+    }
 
-	c.JSON(http.StatusOK, gin.H{
-		"token":   token,
-		"user_id": user.ID,
-		"email":   user.Email,
-	})
-}
+    // Check if user is verified
+    if !user.Verified {
+        fmt.Printf("User not verified: %s\n", user.Email)
+        c.JSON(401, gin.H{"error": "Email not verified"})
+        return
+    }
 
-func DeleteImageHandler(c *gin.Context) {
-	// Get userID from the JWT token in the context
-	userID, exists := c.Get("userID")
-	if !exists {
-		c.JSON(http.StatusUnauthorized, gin.H{"error": "User not authenticated"})
-		return
-	}
+    // Generate JWT token
+    token, err := auth.GenerateJWT(user.ID)
+    if err != nil {
+        fmt.Printf("Failed to generate token: %v\n", err)
+        c.JSON(500, gin.H{"error": "Failed to generate token"})
+        return
+    }
 
-	// Get the image ID from the URL parameter
-	imageID := c.Param("id")
+    // Log successful login
+    fmt.Printf("Login successful for user: %s (ID: %s)\n", user.Email, user.ID)
 
-	// Delete the image from the database
-	err := db.DeleteImage(imageID, userID.(string))
-	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to delete image: " + err.Error()})
-		return
-	}
-
-	c.JSON(http.StatusOK, gin.H{"message": "Image deleted successfully"})
+    // Return successful response
+    c.JSON(200, gin.H{
+        "token": token,
+        "user_id": user.ID,
+        "email": user.Email,
+    })
 }
 
 // RegisterHandler handles registration requests
@@ -102,10 +101,20 @@ func RegisterHandler(c *gin.Context) {
 		return
 	}
 
+	// Generate verification token
+	token, expiry, err := auth.GenerateVerificationData()
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Could not generate verification token"})
+		return
+	}
+
 	// Create a new user in the database
 	user := models.User{
-		Email:    registerRequest.Email,
-		Password: string(hashedPassword), // Store the hashed password
+		Email:              registerRequest.Email,
+		Password:           string(hashedPassword), // Store the hashed password
+		Verified:           false,
+		VerificationToken:  token,
+		VerificationExpiry: &expiry,
 	}
 
 	// Insert user into the DB
@@ -115,18 +124,136 @@ func RegisterHandler(c *gin.Context) {
 		return
 	}
 
-	// Generate JWT for automatic login after registration
-	token, err := auth.GenerateJWT(userID)
+	// Send verification email
+	err = utils.SendVerificationEmail(user.Email, token, user.Email)
 	if err != nil {
-		c.JSON(http.StatusOK, gin.H{"message": "Registration successful, but could not generate token"})
+		// If email sending fails, log it but don't prevent registration
+		// In production, you might want to handle this differently
+		c.JSON(http.StatusOK, gin.H{
+			"message": "Registration successful, but could not send verification email",
+			"user_id": userID,
+		})
 		return
 	}
 
 	c.JSON(http.StatusOK, gin.H{
-		"message": "Registration successful",
-		"token":   token,
+		"message": "Registration successful! Please check your email to verify your account.",
 		"user_id": userID,
 	})
+}
+
+// VerifyEmailHandler handles email verification requests
+func VerifyEmailHandler(c *gin.Context) {
+	var verificationRequest models.EmailVerificationRequest
+	if err := c.ShouldBindJSON(&verificationRequest); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid token"})
+		return
+	}
+
+	// Log the received token for debugging
+	fmt.Printf("Received verification token: %s\n", verificationRequest.Token)
+
+	userID, err := db.VerifyUserEmail(verificationRequest.Token)
+	if err != nil {
+		fmt.Printf("Error verifying email: %s\n", err.Error())
+		c.JSON(http.StatusBadRequest, gin.H{"success": false, "message": err.Error()})
+		return
+	}
+
+	// Generate JWT for automatic login after verification
+	token, err := auth.GenerateJWT(userID)
+	if err != nil {
+		c.JSON(http.StatusOK, gin.H{
+			"success": true,
+			"message": "Email verification successful! Please log in.",
+		})
+		return
+	}
+
+	user, err := db.GetUserByID(userID)
+	if err != nil {
+		c.JSON(http.StatusOK, gin.H{
+			"success": true,
+			"message": "Email verification successful! Please log in.",
+		})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{
+		"success": true,
+		"message": "Email verification successful!",
+		"token":   token,
+		"user_id": userID,
+		"email":   user.Email,
+	})
+}
+
+// ResendVerificationHandler handles requests to resend verification emails
+func ResendVerificationHandler(c *gin.Context) {
+	var resendRequest models.ResendVerificationRequest
+	if err := c.ShouldBindJSON(&resendRequest); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid input"})
+		return
+	}
+
+	// Check if user exists
+	user, err := db.GetUserByEmail(resendRequest.Email)
+	if err != nil {
+		c.JSON(http.StatusNotFound, gin.H{"error": "User not found"})
+		return
+	}
+
+	// Check if user is already verified
+	if user.Verified {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Email is already verified"})
+		return
+	}
+
+	// Generate new verification token
+	token, expiry, err := auth.GenerateVerificationData()
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Could not generate verification token"})
+		return
+	}
+
+	// Update token in database
+	err = db.UpdateVerificationToken(user.Email, token, expiry)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Could not update verification token"})
+		return
+	}
+
+	// Send verification email
+	err = utils.SendVerificationEmail(user.Email, token, user.Email)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Could not send verification email"})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{
+		"message": "Verification email sent! Please check your inbox.",
+	})
+}
+
+func DeleteImageHandler(c *gin.Context) {
+	// Get userID from the JWT token in the context
+	userID, exists := c.Get("userID")
+	if !exists {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "User not authenticated"})
+		return
+	}
+
+	// Get the image ID from the URL parameter
+	imageID := c.Param("id")
+
+	// Delete the image from the database
+	err := db.DeleteImage(imageID, userID.(string))
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to delete image: " + err.Error()})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{"message": "Image deleted successfully"})
 }
 
 // Helper function to validate email format
@@ -152,8 +279,9 @@ func GetUserProfileHandler(c *gin.Context) {
 
 	// Return user profile
 	c.JSON(http.StatusOK, gin.H{
-		"id":    user.ID,
-		"email": user.Email,
+		"id":       user.ID,
+		"email":    user.Email,
+		"verified": user.Verified,
 	})
 }
 

@@ -16,9 +16,28 @@ type RegisterRequest struct {
 
 // User represents a user entity, which will be stored in the database
 type User struct {
-	ID       string `json:"id"`
-	Email    string `json:"email"`
-	Password string `json:"password,omitempty"` // omitempty for JSON responses
+	ID                string     `json:"id"`
+	Email             string     `json:"email"`
+	Password          string     `json:"password,omitempty"` // omitempty for JSON responses
+	Verified          bool       `json:"verified"`
+	VerificationToken string     `json:"verification_token,omitempty"`
+	VerificationExpiry *time.Time `json:"verification_expiry,omitempty"`
+}
+
+// VerificationResponse represents the structure of data returned for verification requests
+type VerificationResponse struct {
+	Success bool   `json:"success"`
+	Message string `json:"message"`
+}
+
+// EmailVerificationRequest represents a request to verify an email
+type EmailVerificationRequest struct {
+	Token string `json:"token" binding:"required"`
+}
+
+// ResendVerificationRequest represents a request to resend verification email
+type ResendVerificationRequest struct {
+	Email string `json:"email" binding:"required,email"`
 }
 
 // ImageMeta represents metadata for an image

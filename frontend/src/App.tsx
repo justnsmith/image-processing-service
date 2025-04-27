@@ -5,8 +5,10 @@ import Home from './pages/Home';
 import Login from './pages/Login';
 import Register from './pages/Register';
 import Dashboard from './pages/Dashboard';
+import VerifyEmail from './pages/VerifyEmail';
+import ResendVerification from './pages/ResendVerification';
 
-// Protected route component
+// ProtectedRoute Component
 const ProtectedRoute: React.FC<{ children: React.ReactNode }> = ({ children }) => {
     const { isAuthenticated, isLoading } = useAuth();
 
@@ -14,15 +16,18 @@ const ProtectedRoute: React.FC<{ children: React.ReactNode }> = ({ children }) =
         return <div className="loading">Loading...</div>;
     }
 
-    return isAuthenticated ? <>{children}</> : <Navigate to="/login" />;
+    return isAuthenticated ? <>{children}</> : <Navigate to="/login" replace />;
 };
 
-const AppRoutes = () => {
+// All Routes
+const AppRoutes: React.FC = () => {
     return (
         <Routes>
             <Route path="/" element={<Home />} />
             <Route path="/login" element={<Login />} />
             <Route path="/register" element={<Register />} />
+            <Route path="/verify-email" element={<VerifyEmail />} />
+            <Route path="/resend-verification" element={<ResendVerification />} />
             <Route
                 path="/dashboard"
                 element={
@@ -31,11 +36,12 @@ const AppRoutes = () => {
                     </ProtectedRoute>
                 }
             />
-            <Route path="*" element={<Navigate to="/" />} />
+            <Route path="*" element={<Navigate to="/login" replace />} />
         </Routes>
     );
 };
 
+// Main App
 const App: React.FC = () => {
     return (
         <Router>
