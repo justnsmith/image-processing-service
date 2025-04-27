@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { uploadImage } from '../../api/api';
 import { ImageMeta } from '../../types';
 
@@ -16,8 +16,86 @@ export const ImageUploader: React.FC<ImageUploaderProps> = ({ onUploadSuccess })
     const [cropY, setCropY] = useState<number>(0);
     const [cropWidth, setCropWidth] = useState<number>(0);
     const [cropHeight, setCropHeight] = useState<number>(0);
-    const [tintColor, setTintColor] = useState('');
     const [previewSrc, setPreviewSrc] = useState<string | null>(null);
+    const [dragActive, setDragActive] = useState(false);
+    const [cropPreviewVisible, setCropPreviewVisible] = useState(false);
+    const [originalImageDimensions, setOriginalImageDimensions] = useState({ width: 0, height: 0 });
+    const [tintColor, setTintColor] = useState('');
+    const [tintPreview, setTintPreview] = useState(false);
+
+    const fileInputRef = useRef<HTMLInputElement>(null);
+    const imagePreviewRef = useRef<HTMLImageElement>(null);
+    const cropPreviewRef = useRef<HTMLDivElement>(null);
+    const tintOverlayRef = useRef<HTMLDivElement>(null);
+    const imageContainerRef = useRef<HTMLDivElement>(null);
+
+    // For interactive crop preview
+    useEffect(() => {
+        if (previewSrc && cropPreviewVisible && imagePreviewRef.current && cropPreviewRef.current && imageContainerRef.current) {
+            const img = imagePreviewRef.current;
+            const preview = cropPreviewRef.current;
+            const container = imageContainerRef.current;
+
+            // Wait for image to load to get correct dimensions
+            if (img.complete) {
+                updateCropPreview();
+            } else {
+                img.onload = updateCropPreview;
+            }
+
+            function updateCropPreview() {
+                // Get the actual displayed size of the image
+                const rect = img.getBoundingClientRect();
+                const containerRect = container.getBoundingClientRect();
+
+                // Calculate scale factors for preview
+                const scaleX = rect.width / originalImageDimensions.width;
+                const scaleY = rect.height / originalImageDimensions.height;
+
+                // Calculate position relative to container
+                const offsetX = (containerRect.width - rect.width) / 2;
+                const offsetY = (containerRect.height - rect.height) / 2;
+
+                // Update crop preview position and size
+                preview.style.left = `${offsetX + cropX * scaleX}px`;
+                preview.style.top = `${offsetY + cropY * scaleY}px`;
+                preview.style.width = `${cropWidth * scaleX}px`;
+                preview.style.height = `${cropHeight * scaleY}px`;
+            }
+        }
+    }, [cropX, cropY, cropWidth, cropHeight, previewSrc, cropPreviewVisible, originalImageDimensions]);
+
+    // Update tint overlay
+    useEffect(() => {
+        if (previewSrc && tintOverlayRef.current && imagePreviewRef.current && tintPreview && tintColor) {
+            const img = imagePreviewRef.current;
+            const overlay = tintOverlayRef.current;
+
+            if (img.complete) {
+                updateTintOverlay();
+            } else {
+                img.onload = updateTintOverlay;
+            }
+
+            function updateTintOverlay() {
+                const rect = img.getBoundingClientRect();
+
+                overlay.style.left = `${rect.left - img.parentElement!.getBoundingClientRect().left}px`;
+                overlay.style.top = `${rect.top - img.parentElement!.getBoundingClientRect().top}px`;
+                overlay.style.width = `${rect.width}px`;
+                overlay.style.height = `${rect.height}px`;
+                overlay.style.backgroundColor = tintColor;
+                overlay.style.opacity = "0.5"; // Fixed opacity at 50%
+            }
+        }
+    }, [tintColor, previewSrc, tintPreview]);
+
+    // When advanced mode is active, sync width with crop width
+    useEffect(() => {
+        if (showAdvanced && cropWidth > 0) {
+            setWidth(cropWidth);
+        }
+    }, [cropWidth, showAdvanced]);
 
     const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         if (e.target.files && e.target.files[0]) {
@@ -26,9 +104,70 @@ export const ImageUploader: React.FC<ImageUploaderProps> = ({ onUploadSuccess })
 
             const reader = new FileReader();
             reader.onload = (e) => {
-                setPreviewSrc(e.target?.result as string);
+                const imageSrc = e.target?.result as string;
+                setPreviewSrc(imageSrc);
+                // Reset crop values when new image is loaded
+                setCropX(0);
+                setCropY(0);
+                setCropWidth(0);
+                setCropHeight(0);
+
+                // Auto-get image dimensions once loaded
+                const img = new Image();
+                img.onload = () => {
+                    setOriginalImageDimensions({ width: img.width, height: img.height });
+                    setCropWidth(img.width);
+                    setCropHeight(img.height);
+                };
+                img.src = imageSrc;
             };
             reader.readAsDataURL(selectedFile);
+        }
+    };
+
+    const handleDrag = (e: React.DragEvent) => {
+        e.preventDefault();
+        e.stopPropagation();
+
+        if (e.type === 'dragenter' || e.type === 'dragover') {
+            setDragActive(true);
+        } else if (e.type === 'dragleave') {
+            setDragActive(false);
+        }
+    };
+
+    const handleDrop = (e: React.DragEvent) => {
+        e.preventDefault();
+        e.stopPropagation();
+        setDragActive(false);
+
+        if (e.dataTransfer.files && e.dataTransfer.files[0]) {
+            const droppedFile = e.dataTransfer.files[0];
+            if (droppedFile.type.startsWith('image/')) {
+                setFile(droppedFile);
+
+                const reader = new FileReader();
+                reader.onload = (e) => {
+                    const imageSrc = e.target?.result as string;
+                    setPreviewSrc(imageSrc);
+                    setCropX(0);
+                    setCropY(0);
+                    setCropWidth(0);
+                    setCropHeight(0);
+
+                    // Auto-get image dimensions once loaded
+                    const img = new Image();
+                    img.onload = () => {
+                        setOriginalImageDimensions({ width: img.width, height: img.height });
+                        setCropWidth(img.width);
+                        setCropHeight(img.height);
+                    };
+                    img.src = imageSrc;
+                };
+                reader.readAsDataURL(droppedFile);
+            } else {
+                setError('Please select an image file');
+            }
         }
     };
 
@@ -44,22 +183,48 @@ export const ImageUploader: React.FC<ImageUploaderProps> = ({ onUploadSuccess })
 
         try {
             console.log("Starting upload...");
-            const applyModifications = showAdvanced || width !== 800;
+
+            // Only send crop parameters if we're cropping (i.e., not using full image)
+            const isCropping = showAdvanced &&
+                (cropX > 0 || cropY > 0 ||
+                    (cropWidth > 0 && cropWidth < originalImageDimensions.width) ||
+                    (cropHeight > 0 && cropHeight < originalImageDimensions.height));
+
+            // Check if we're tinting
+            const isTinting = showAdvanced && tintColor && tintColor.trim() !== '';
+
+            // Calculate whether we should resize
+            const shouldResize = !showAdvanced && width !== originalImageDimensions.width;
 
             // Only send parameters if we're modifying the image
-            const params: any = applyModifications ? { width } : {};
+            const params: any = {};
 
-            if (showAdvanced && applyModifications) {
-                if (cropWidth > 0 && cropHeight > 0) {
-                    params.cropX = cropX;
-                    params.cropY = cropY;
-                    params.cropWidth = cropWidth;
-                    params.cropHeight = cropHeight;
-                }
+            // If in advanced mode, use crop width as resize width
+            if (isCropping) {
+                params.cropX = Math.round(cropX);
+                params.cropY = Math.round(cropY);
+                params.cropWidth = Math.round(cropWidth);
+                params.cropHeight = Math.round(cropHeight);
+                params.originalWidth = originalImageDimensions.width;
+                params.originalHeight = originalImageDimensions.height;
+                params.width = params.cropWidth;  // Crop width becomes the resize width
 
-                if (tintColor) {
-                    params.tintColor = tintColor;
-                }
+                console.log("Sending crop parameters:", {
+                    cropX: params.cropX,
+                    cropY: params.cropY,
+                    cropWidth: params.cropWidth,
+                    cropHeight: params.cropHeight,
+                    originalDimensions: originalImageDimensions
+                });
+            } else if (shouldResize) {
+                // Only apply resize if not cropping
+                params.width = width;
+            }
+
+            // Add tint color if specified
+            if (isTinting) {
+                params.tintColor = tintColor;
+                params.tintOpacity = 0.5;  // Fixed opacity at 50%
             }
 
             console.log("Upload params:", params);
@@ -76,7 +241,7 @@ export const ImageUploader: React.FC<ImageUploaderProps> = ({ onUploadSuccess })
                 width: response.width || 0,
                 height: response.height || 0,
                 content_type: file.type,
-                processing_status: applyModifications ? 'pending' : undefined
+                processing_status: (isCropping || shouldResize || isTinting) ? 'pending' : undefined
             };
 
             console.log("Created new image metadata:", newImage);
@@ -91,6 +256,8 @@ export const ImageUploader: React.FC<ImageUploaderProps> = ({ onUploadSuccess })
             setCropWidth(0);
             setCropHeight(0);
             setTintColor('');
+            setCropPreviewVisible(false);
+            setTintPreview(false);
         } catch (err) {
             console.error("Upload error:", err);
             setError(err instanceof Error ? err.message : 'Upload failed');
@@ -109,169 +276,362 @@ export const ImageUploader: React.FC<ImageUploaderProps> = ({ onUploadSuccess })
         setCropHeight(0);
         setTintColor('');
         setError('');
+        setCropPreviewVisible(false);
+        setTintPreview(false);
+        if (fileInputRef.current) {
+            fileInputRef.current.value = '';
+        }
+    };
+
+    // Auto-set crop dimensions based on image
+    const setAutoCrop = () => {
+        if (originalImageDimensions.width > 0 && originalImageDimensions.height > 0) {
+            setCropX(0);
+            setCropY(0);
+            setCropWidth(originalImageDimensions.width);
+            setCropHeight(originalImageDimensions.height);
+        }
+    };
+
+    // Set crop to center square
+    const setCenterSquareCrop = () => {
+        if (originalImageDimensions.width > 0 && originalImageDimensions.height > 0) {
+            const size = Math.min(originalImageDimensions.width, originalImageDimensions.height);
+            const x = Math.floor((originalImageDimensions.width - size) / 2);
+            const y = Math.floor((originalImageDimensions.height - size) / 2);
+            setCropX(x);
+            setCropY(y);
+            setCropWidth(size);
+            setCropHeight(size);
+        }
+    };
+
+    // Set crop to maintain aspect ratio with resize width
+    const setResizeAspectCrop = () => {
+        if (originalImageDimensions.width > 0 && originalImageDimensions.height > 0 && width > 0) {
+
+            // Calculate what this would be on the original image
+            const cropWidthOnOriginal = originalImageDimensions.width;
+            const cropHeightOnOriginal = originalImageDimensions.height;
+
+            setCropX(0);
+            setCropY(0);
+            setCropWidth(cropWidthOnOriginal);
+            setCropHeight(cropHeightOnOriginal);
+        }
+    };
+
+    // Toggle crop preview overlay
+    const toggleCropPreview = () => {
+        setCropPreviewVisible(!cropPreviewVisible);
+    };
+
+    // Toggle tint preview overlay
+    const toggleTintPreview = () => {
+        setTintPreview(!tintPreview);
     };
 
     return (
-        <div className="bg-white rounded-lg shadow-md p-6 mb-6">
-            <h2 className="text-xl font-semibold mb-4">Upload New Image</h2>
+        <div className="glass-card p-6 mb-6 bg-gray-900 bg-opacity-50 backdrop-filter backdrop-blur-lg rounded-xl border border-gray-800">
+            <h2 className="text-xl font-semibold mb-4 text-gray-200">Upload New Image</h2>
             <form onSubmit={handleSubmit}>
                 {error && (
-                    <div className="bg-red-50 text-red-800 p-3 rounded-md text-sm mb-4">
+                    <div className="bg-red-900 bg-opacity-30 text-red-300 p-3 rounded-md text-sm mb-4 border border-red-700">
                         {error}
                     </div>
                 )}
 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                     <div>
-                        <div className="mb-4">
-                            <label className="block text-sm font-medium text-gray-700 mb-1">
-                                Select Image
-                            </label>
+                        <div
+                            className={`mb-4 border-2 border-dashed rounded-lg p-6 text-center transition-all ${dragActive
+                                    ? 'border-indigo-500 bg-indigo-900 bg-opacity-20'
+                                    : 'border-gray-700 hover:border-gray-600'
+                                }`}
+                            onDragEnter={handleDrag}
+                            onDragOver={handleDrag}
+                            onDragLeave={handleDrag}
+                            onDrop={handleDrop}
+                        >
                             <input
                                 type="file"
                                 accept="image/*"
                                 onChange={handleFileChange}
-                                className="w-full p-2 border border-gray-300 rounded-md"
+                                className="hidden"
+                                ref={fileInputRef}
                             />
+
+                            <div className="flex flex-col items-center justify-center space-y-3">
+                                <svg className="w-12 h-12 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"></path>
+                                </svg>
+                                <p className="text-gray-300">
+                                    Drag & drop an image or{' '}
+                                    <button
+                                        type="button"
+                                        onClick={() => fileInputRef.current?.click()}
+                                        className="text-indigo-400 hover:text-indigo-300 font-medium"
+                                    >
+                                        browse
+                                    </button>
+                                </p>
+                                <p className="text-gray-500 text-sm">PNG, JPG, GIF up to 10MB</p>
+                            </div>
                         </div>
 
-                        <div className="mb-4">
-                            <label className="block text-sm font-medium text-gray-700 mb-1">
-                                Resize Width (px)
-                            </label>
-                            <input
-                                type="number"
-                                value={width}
-                                onChange={(e) => setWidth(parseInt(e.target.value) || 800)}
-                                min="1"
-                                className="w-full p-2 border border-gray-300 rounded-md"
-                            />
-                        </div>
+                        {/* Only show resize width control when advanced mode is off */}
+                        {!showAdvanced && (
+                            <div className="mb-4">
+                                <label className="block text-sm font-medium text-gray-300 mb-1">
+                                    Resize Width (px)
+                                </label>
+                                <div className="flex items-center space-x-2">
+                                    <input
+                                        type="range"
+                                        min="100"
+                                        max="2000"
+                                        step="50"
+                                        value={width}
+                                        onChange={(e) => setWidth(parseInt(e.target.value))}
+                                        className="w-full h-2 bg-gray-700 rounded-lg appearance-none cursor-pointer"
+                                    />
+                                    <input
+                                        type="number"
+                                        value={width}
+                                        onChange={(e) => setWidth(parseInt(e.target.value) || 800)}
+                                        min="1"
+                                        className="w-20 p-2 bg-gray-800 border border-gray-700 rounded-md text-gray-200 text-center"
+                                    />
+                                </div>
+                            </div>
+                        )}
 
-                        <div className="mb-4 mt-4">
+                        <div className="mb-4 mt-6">
                             <button
                                 type="button"
-                                className="text-blue-600 text-sm flex items-center"
+                                className="text-indigo-400 hover:text-indigo-300 text-sm flex items-center transition-colors"
                                 onClick={() => setShowAdvanced(!showAdvanced)}
                             >
-                                {showAdvanced ? '- Hide' : '+ Show'} Advanced Options
+                                <svg className="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                                    {showAdvanced ? (
+                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 9l-7 7-7-7"></path>
+                                    ) : (
+                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 5l7 7-7 7"></path>
+                                    )}
+                                </svg>
+                                {showAdvanced ? 'Simple Resize' : 'Advanced Options (Crop & Tint)'}
                             </button>
                         </div>
 
                         {showAdvanced && (
-                            <div className="p-4 border border-gray-200 rounded-md mb-4">
-                                <h3 className="font-medium mb-2">Crop Options</h3>
+                            <div className="p-4 border border-gray-700 rounded-md mb-4 bg-gray-800 bg-opacity-50">
+                                <h3 className="font-medium mb-3 text-gray-200 flex items-center">
+                                    <svg className="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"></path>
+                                    </svg>
+                                    Crop Options
+                                </h3>
+
+                                <div className="flex space-x-2 mb-3">
+                                    <button
+                                        type="button"
+                                        onClick={toggleCropPreview}
+                                        className={`px-3 py-1 text-xs font-medium rounded-md transition-colors ${cropPreviewVisible
+                                                ? 'bg-indigo-700 text-white'
+                                                : 'bg-gray-700 text-gray-300 hover:bg-gray-600'
+                                            }`}
+                                    >
+                                        {cropPreviewVisible ? 'Hide Overlay' : 'Show Overlay'}
+                                    </button>
+                                    <button
+                                        type="button"
+                                        onClick={setAutoCrop}
+                                        className="bg-gray-700 hover:bg-gray-600 text-gray-300 px-3 py-1 rounded-md text-xs font-medium transition-colors"
+                                    >
+                                        Full Image
+                                    </button>
+                                    <button
+                                        type="button"
+                                        onClick={setCenterSquareCrop}
+                                        className="bg-gray-700 hover:bg-gray-600 text-gray-300 px-3 py-1 rounded-md text-xs font-medium transition-colors"
+                                    >
+                                        Square Crop
+                                    </button>
+                                    <button
+                                        type="button"
+                                        onClick={setResizeAspectCrop}
+                                        className="bg-gray-700 hover:bg-gray-600 text-gray-300 px-3 py-1 rounded-md text-xs font-medium transition-colors"
+                                    >
+                                        Match Resize
+                                    </button>
+                                </div>
+
                                 <div className="grid grid-cols-2 gap-4">
                                     <div>
-                                        <label className="block text-sm font-medium text-gray-700 mb-1">X Position</label>
+                                        <label className="block text-sm font-medium text-gray-300 mb-1">X Position</label>
                                         <input
                                             type="number"
                                             value={cropX}
                                             onChange={(e) => setCropX(parseInt(e.target.value) || 0)}
                                             min="0"
-                                            className="w-full p-2 border border-gray-300 rounded-md"
+                                            max={originalImageDimensions.width}
+                                            className="w-full p-2 bg-gray-800 border border-gray-700 rounded-md text-gray-200"
                                         />
                                     </div>
                                     <div>
-                                        <label className="block text-sm font-medium text-gray-700 mb-1">Y Position</label>
+                                        <label className="block text-sm font-medium text-gray-300 mb-1">Y Position</label>
                                         <input
                                             type="number"
                                             value={cropY}
                                             onChange={(e) => setCropY(parseInt(e.target.value) || 0)}
                                             min="0"
-                                            className="w-full p-2 border border-gray-300 rounded-md"
+                                            max={originalImageDimensions.height}
+                                            className="w-full p-2 bg-gray-800 border border-gray-700 rounded-md text-gray-200"
                                         />
                                     </div>
                                     <div>
-                                        <label className="block text-sm font-medium text-gray-700 mb-1">Width</label>
+                                        <label className="block text-sm font-medium text-gray-300 mb-1">Width (Resize Width)</label>
                                         <input
                                             type="number"
                                             value={cropWidth}
                                             onChange={(e) => setCropWidth(parseInt(e.target.value) || 0)}
                                             min="0"
-                                            className="w-full p-2 border border-gray-300 rounded-md"
+                                            max={originalImageDimensions.width - cropX}
+                                            className="w-full p-2 bg-gray-800 border border-gray-700 rounded-md text-gray-200"
                                         />
                                     </div>
                                     <div>
-                                        <label className="block text-sm font-medium text-gray-700 mb-1">Height</label>
+                                        <label className="block text-sm font-medium text-gray-300 mb-1">Height</label>
                                         <input
                                             type="number"
                                             value={cropHeight}
                                             onChange={(e) => setCropHeight(parseInt(e.target.value) || 0)}
                                             min="0"
-                                            className="w-full p-2 border border-gray-300 rounded-md"
+                                            max={originalImageDimensions.height - cropY}
+                                            className="w-full p-2 bg-gray-800 border border-gray-700 rounded-md text-gray-200"
                                         />
                                     </div>
                                 </div>
 
-                                <h3 className="font-medium mt-4 mb-2">Color Options</h3>
-                                <div>
-                                    <label className="block text-sm font-medium text-gray-700 mb-1">Tint Color (hex)</label>
+                                <h3 className="font-medium mb-3 mt-6 text-gray-200 flex items-center">
+                                    <svg className="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M7 21a4 4 0 01-4-4V5a2 2 0 012-2h4a2 2 0 012 2v12a4 4 0 01-4 4zm0 0h12a2 2 0 002-2v-4a2 2 0 00-2-2h-2.343M11 7.343l1.657-1.657a2 2 0 012.828 0l2.829 2.829a2 2 0 010 2.828l-8.486 8.485M7 17h.01"></path>
+                                    </svg>
+                                    Tint Option
+                                </h3>
+
+                                <div className="flex space-x-2 mb-3">
+                                    <button
+                                        type="button"
+                                        onClick={toggleTintPreview}
+                                        className={`px-3 py-1 text-xs font-medium rounded-md transition-colors ${tintPreview
+                                                ? 'bg-indigo-700 text-white'
+                                                : 'bg-gray-700 text-gray-300 hover:bg-gray-600'
+                                            }`}
+                                    >
+                                        {tintPreview ? 'Hide Tint Preview' : 'Show Tint Preview'}
+                                    </button>
+                                </div>
+
+                                <div className="flex space-x-2">
+                                    <input
+                                        type="color"
+                                        value={tintColor || '#6366f1'}
+                                        onChange={(e) => setTintColor(e.target.value)}
+                                        className="h-10 w-10 rounded border-0 bg-transparent p-0"
+                                    />
                                     <input
                                         type="text"
                                         placeholder="#RRGGBB"
                                         value={tintColor}
                                         onChange={(e) => setTintColor(e.target.value)}
-                                        className="w-full p-2 border border-gray-300 rounded-md"
+                                        className="flex-1 p-2 bg-gray-800 border border-gray-700 rounded-md text-gray-200"
                                     />
                                 </div>
+                                <p className="text-xs text-gray-400 mt-1">
+                                    Tint will be applied with 50% opacity
+                                </p>
                             </div>
                         )}
                     </div>
 
                     <div>
-                        {previewSrc && (
+                        {previewSrc ? (
                             <div className="mb-4">
-                                <label className="block text-sm font-medium text-gray-700 mb-2">
+                                <label className="block text-sm font-medium text-gray-300 mb-2">
                                     Preview
                                 </label>
-                                <div className="border border-gray-200 rounded-md overflow-hidden bg-gray-50 h-64 flex items-center justify-center">
+                                <div
+                                    className="border border-gray-700 rounded-md overflow-hidden bg-gray-800 h-64 flex items-center justify-center relative"
+                                    ref={imageContainerRef}
+                                >
                                     <img
+                                        ref={imagePreviewRef}
                                         src={previewSrc}
                                         alt="Preview"
                                         className="max-w-full max-h-full object-contain"
                                     />
+                                    {cropPreviewVisible && (
+                                        <div
+                                            ref={cropPreviewRef}
+                                            className="absolute border-2 border-indigo-500 bg-indigo-500 bg-opacity-10 pointer-events-none"
+                                        ></div>
+                                    )}
+                                    {tintPreview && tintColor && (
+                                        <div
+                                            ref={tintOverlayRef}
+                                            className="absolute pointer-events-none mix-blend-multiply"
+                                            style={{ backgroundColor: tintColor, opacity: 0.5 }}
+                                        ></div>
+                                    )}
                                 </div>
-                                <p className="mt-2 text-sm text-gray-500">
-                                    {showAdvanced || width !== 800
-                                        ? "This image will be processed according to your specifications."
-                                        : "The original image will be uploaded without modifications."}
-                                </p>
+                                <div className="text-xs text-gray-400 mt-1">
+                                    {file && (
+                                        <span>
+                                            {file.name} ({Math.round(file.size / 1024)} KB) •
+                                            {originalImageDimensions.width && originalImageDimensions.height ?
+                                                ` ${originalImageDimensions.width}×${originalImageDimensions.height}px` :
+                                                ' Loading dimensions...'}
+                                        </span>
+                                    )}
+                                </div>
+                            </div>
+                        ) : (
+                            <div className="border border-gray-700 rounded-md bg-gray-800 h-64 flex items-center justify-center mb-4">
+                                <p className="text-gray-500 text-sm">No image selected</p>
                             </div>
                         )}
+
+                        <div className="mt-6 flex items-center space-x-4">
+                            <button
+                                type="submit"
+                                disabled={isUploading || !file}
+                                className={`px-4 py-2 rounded-md font-medium flex items-center ${isUploading || !file
+                                        ? 'bg-gray-700 text-gray-400 cursor-not-allowed'
+                                        : 'bg-indigo-600 hover:bg-indigo-700 text-white transition-colors'
+                                    }`}
+                            >
+                                {isUploading && (
+                                    <svg className="animate-spin -ml-1 mr-2 h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                                    </svg>
+                                )}
+                                {isUploading ? 'Uploading...' : 'Upload Image'}
+                            </button>
+                            <button
+                                type="button"
+                                onClick={resetForm}
+                                className="px-4 py-2 bg-gray-700 hover:bg-gray-600 text-gray-300 rounded-md font-medium transition-colors"
+                            >
+                                Reset
+                            </button>
+                        </div>
                     </div>
-                </div>
-
-                <div className="flex gap-3 mt-6">
-                    <button
-                        type="submit"
-                        disabled={!file || isUploading}
-                        className={`flex-1 py-2 px-4 rounded-md ${isUploading ? 'bg-blue-400' : 'bg-blue-600 hover:bg-blue-700'} text-white font-medium`}
-                    >
-                        {isUploading ? (
-                            <span className="flex items-center justify-center">
-                                <svg className="animate-spin h-5 w-5 mr-2" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                                </svg>
-                                Uploading...
-                            </span>
-                        ) : (
-                            <span>
-                                {showAdvanced || width !== 800 ? 'Upload & Process Image' : 'Upload Original Image'}
-                            </span>
-                        )}
-                    </button>
-
-                    <button
-                        type="button"
-                        onClick={resetForm}
-                        className="bg-gray-100 hover:bg-gray-200 text-gray-800 py-2 px-4 rounded-md font-medium"
-                    >
-                        Reset
-                    </button>
                 </div>
             </form>
         </div>
     );
-}
+};
+
+export default ImageUploader;

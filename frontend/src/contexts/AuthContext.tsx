@@ -1,5 +1,3 @@
-// src/contexts/AuthContext.tsx
-
 import React, { createContext, useContext, useEffect, useState } from 'react';
 import { User } from '../types';
 import { clearAuth, isAuthenticated, storeAuthData } from '../utils/storage';

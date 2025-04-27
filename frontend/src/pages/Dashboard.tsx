@@ -3,6 +3,7 @@ import { getUserImages, getImageStatus } from '../api/api';
 import { ImageUploader } from '../components/dashboard/ImageUploader';
 import { ImageGrid } from '../components/dashboard/ImageGrid';
 import { ImageMeta } from '../types';
+import { Header } from '../components/layout/Header';
 
 const Dashboard: React.FC = () => {
     const [images, setImages] = useState<ImageMeta[]>([]);
@@ -14,9 +15,10 @@ const Dashboard: React.FC = () => {
             try {
                 setIsLoading(true);
                 const response = await getUserImages();
-                setImages(response.images);
+                setImages(response.images || []);
             } catch (error) {
                 console.error('Failed to fetch images:', error);
+                setImages([]);
             } finally {
                 setIsLoading(false);
             }
@@ -27,6 +29,10 @@ const Dashboard: React.FC = () => {
 
     // Set up polling for pending images
     useEffect(() => {
+        if (!images || images.length === 0) {
+            return;
+        }
+
         const pendingImages = images.filter(img => img.processing_status === 'pending');
 
         if (pendingImages.length === 0) {
@@ -63,11 +69,11 @@ const Dashboard: React.FC = () => {
         return () => {
             clearInterval(intervalId);
         };
-    }, [JSON.stringify(images.filter(img => img.processing_status === 'pending').map(img => img.id))]);
+    }, [images]);
 
     const handleImageUpload = async (newImage: ImageMeta) => {
         console.log("New image uploaded:", newImage);
-        setImages(prev => [newImage, ...prev]);
+        setImages(prev => [newImage, ...(prev || [])]);
 
         // If this is a processed image, start checking status immediately
         if (newImage.processing_status === 'pending') {
@@ -75,11 +81,10 @@ const Dashboard: React.FC = () => {
             // Begin checking status immediately
             const checkStatus = async () => {
                 try {
-                    // Use image.id consistently
                     const status = await getImageStatus(newImage.id);
                     if (status.status === 'completed' || status.status === 'failed') {
                         setImages(prev =>
-                            prev.map(img =>
+                            (prev || []).map(img =>
                                 img.id === newImage.id
                                     ? { ...img, processing_status: status.status, processed_url: status.processed_url } as ImageMeta
                                     : img
@@ -107,22 +112,25 @@ const Dashboard: React.FC = () => {
     };
 
     const handleImageDelete = (id: string) => {
-        setImages(prev => prev.filter(img => img.id !== id));
+        setImages(prev => (prev || []).filter(img => img.id !== id));
     };
 
     return (
-        <div className="container mx-auto px-4 py-8">
-            <h1 className="text-3xl font-bold mb-8">Image Dashboard</h1>
+        <div className="flex flex-col min-h-screen">
+            <Header />
+            <div className="flex-grow p-8 bg-card-dark">
+                <h1 className="text-3xl font-bold mb-8 text-gray-200">Image Dashboard</h1>
 
-            <ImageUploader onUploadSuccess={handleImageUpload} />
+                <ImageUploader onUploadSuccess={handleImageUpload} />
 
-            <div className="mt-8">
-                <h2 className="text-2xl font-semibold mb-4">Your Images</h2>
-                <ImageGrid
-                    images={images}
-                    isLoading={isLoading}
-                    onImageDelete={handleImageDelete}
-                />
+                <div className="mt-8">
+                    <h2 className="text-2xl font-semibold mb-4 text-gray-200">Your Images</h2>
+                    <ImageGrid
+                        images={images || []}
+                        isLoading={isLoading}
+                        onImageDelete={handleImageDelete}
+                    />
+                </div>
             </div>
         </div>
     );
