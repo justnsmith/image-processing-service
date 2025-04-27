@@ -7,7 +7,7 @@ import (
 	"image-processing-service/internal/models"
 	"time"
 
-	"github.com/jackc/pgx"
+	"github.com/jackc/pgx/v4"
 )
 
 // CreateUser creates a new user with verification token and returns the user ID
