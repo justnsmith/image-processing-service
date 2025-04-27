@@ -17,6 +17,7 @@ services:
       - AWS_BUCKET_NAME=${AWS_BUCKET_NAME}
       - AWS_ACCESS_KEY_ID=${AWS_ACCESS_KEY_ID}
       - AWS_SECRET_ACCESS_KEY=${AWS_SECRET_ACCESS_KEY}
+      - AWS_REGION=${AWS_REGION:-us-west-2}
       - JWT_SECRET=${JWT_SECRET}
       - REDIS_URL=${REDIS_URL}
     depends_on:
@@ -25,7 +26,6 @@ services:
     networks:
       - backend
     restart: always
-
   postgres:
     image: postgres:13
     container_name: postgres
@@ -39,7 +39,6 @@ services:
       - postgres_data:/var/lib/postgresql/data
     networks:
       - backend
-
   redis:
     image: redis:latest
     container_name: redis
@@ -47,7 +46,6 @@ services:
       - "6379:6379"
     networks:
       - backend
-
   frontend:
     build:
       context: .
@@ -58,10 +56,8 @@ services:
     networks:
       - backend
     restart: always
-
 volumes:
   postgres_data:
-
 networks:
   backend:
     driver: bridge

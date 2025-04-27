@@ -7,9 +7,10 @@ COPY . .
 RUN go build -o main cmd/main.go
 FROM alpine:latest
 WORKDIR /root/
-RUN apk add --no-cache bash
+RUN apk add --no-cache bash ca-certificates tzdata
 COPY --from=builder /app/main .
 COPY .env .
 COPY schema.sql .
+ENV AWS_REGION=us-west-2
 EXPOSE 8080
 CMD ["./main"]
