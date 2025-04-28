@@ -17,11 +17,11 @@ func init() {
 
 // EmailConfig stores email configuration
 type EmailConfig struct {
-	Host     string
-	Port     int
-	Username string
-	Password string
-	FromName string
+	Host      string
+	Port      int
+	Username  string
+	Password  string
+	FromName  string
 	FromEmail string
 }
 
@@ -29,11 +29,11 @@ type EmailConfig struct {
 func GetEmailConfig() EmailConfig {
 	port := 587 // Default SMTP port
 	return EmailConfig{
-		Host:     os.Getenv("SMTP_HOST"),
-		Port:     port,
-		Username: os.Getenv("SMTP_USERNAME"),
-		Password: os.Getenv("SMTP_PASSWORD"),
-		FromName: os.Getenv("EMAIL_FROM_NAME"),
+		Host:      os.Getenv("SMTP_HOST"),
+		Port:      port,
+		Username:  os.Getenv("SMTP_USERNAME"),
+		Password:  os.Getenv("SMTP_PASSWORD"),
+		FromName:  os.Getenv("EMAIL_FROM_NAME"),
 		FromEmail: os.Getenv("EMAIL_FROM_ADDRESS"),
 	}
 }
@@ -72,10 +72,9 @@ func parseVerificationTemplate(token, username string) (string, error) {
 	if baseURL == "" {
 		baseURL = "http://localhost:3000" // Update this to match your React app port
 	}
-	// Change this line: '/verify' to '/verify-email'
 	verificationURL := fmt.Sprintf("%s/verify-email?token=%s", baseURL, token)
 
-	// Email template as a string
+	// Simple email template with white background and black text
 	const emailTemplate = `
 	<!DOCTYPE html>
 	<html>
@@ -83,20 +82,53 @@ func parseVerificationTemplate(token, username string) (string, error) {
 		<meta charset="UTF-8">
 		<title>Verify Your Email</title>
 		<style>
-			body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 0 auto; padding: 20px; }
-			.container { background-color: #f7f8fa; border-radius: 5px; padding: 30px; box-shadow: 0 2px 5px rgba(0,0,0,0.1); }
-			.button { display: inline-block; background-color: #4754D2; color: white; text-decoration: none; padding: 10px 20px; border-radius: 5px; font-weight: bold; }
-			h1 { color: #222; margin-bottom: 20px; }
-			.footer { margin-top: 30px; font-size: 12px; color: #777; }
+			body {
+				font-family: Arial, sans-serif;
+				line-height: 1.6;
+				color: #333333;
+				max-width: 600px;
+				margin: 0 auto;
+				padding: 20px;
+				background-color: #ffffff;
+			}
+			.container {
+				background-color: #ffffff;
+				border-radius: 5px;
+				padding: 25px;
+				border: 1px solid #e5e5e5;
+			}
+			.button {
+				display: inline-block;
+				background-color: #6366f1;
+				color: white;
+				text-decoration: none;
+				padding: 10px 20px;
+				border-radius: 4px;
+				font-weight: bold;
+			}
+			h1 {
+				color: #333333;
+				margin-bottom: 20px;
+			}
+			.footer {
+				margin-top: 30px;
+				font-size: 12px;
+				color: #777777;
+			}
+			.verification-link {
+				word-break: break-all;
+				color: #6366f1;
+			}
 		</style>
 	</head>
 	<body>
 		<div class="container">
 			<h1>Verify Your Email Address</h1>
+			<p>Hi there,</p>
 			<p>Thank you for signing up! Please verify your email address to complete your registration.</p>
 			<p><a href="{{.VerificationURL}}" class="button">Verify Email</a></p>
 			<p>Or copy and paste this link into your browser:</p>
-			<p>{{.VerificationURL}}</p>
+			<p class="verification-link">{{.VerificationURL}}</p>
 			<p>This link will expire in 24 hours.</p>
 			<div class="footer">
 				<p>If you didn't create an account, you can safely ignore this email.</p>
@@ -164,7 +196,7 @@ func parsePasswordResetTemplate(token, email string) (string, error) {
 
 	resetURL := fmt.Sprintf("%s/reset-password?token=%s", baseURL, token)
 
-	// Email template
+	// Simple email template with white background and black text
 	const emailTemplate = `
 	<!DOCTYPE html>
 	<html>
@@ -172,20 +204,53 @@ func parsePasswordResetTemplate(token, email string) (string, error) {
 		<meta charset="UTF-8">
 		<title>Reset Your Password</title>
 		<style>
-			body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 0 auto; padding: 20px; }
-			.container { background-color: #f7f8fa; border-radius: 5px; padding: 30px; box-shadow: 0 2px 5px rgba(0,0,0,0.1); }
-			.button { display: inline-block; background-color: #4754D2; color: white; text-decoration: none; padding: 10px 20px; border-radius: 5px; font-weight: bold; }
-			h1 { color: #222; margin-bottom: 20px; }
-			.footer { margin-top: 30px; font-size: 12px; color: #777; }
+			body {
+				font-family: Arial, sans-serif;
+				line-height: 1.6;
+				color: #333333;
+				max-width: 600px;
+				margin: 0 auto;
+				padding: 20px;
+				background-color: #ffffff;
+			}
+			.container {
+				background-color: #ffffff;
+				border-radius: 5px;
+				padding: 25px;
+				border: 1px solid #e5e5e5;
+			}
+			.button {
+				display: inline-block;
+				background-color: #6366f1;
+				color: white;
+				text-decoration: none;
+				padding: 10px 20px;
+				border-radius: 4px;
+				font-weight: bold;
+			}
+			h1 {
+				color: #333333;
+				margin-bottom: 20px;
+			}
+			.footer {
+				margin-top: 30px;
+				font-size: 12px;
+				color: #777777;
+			}
+			.reset-link {
+				word-break: break-all;
+				color: #6366f1;
+			}
 		</style>
 	</head>
 	<body>
 		<div class="container">
 			<h1>Reset Your Password</h1>
-			<p>We received a request to reset your password. Click the button below to create a new password:</p>
+			<p>We received a request to reset your password.</p>
+			<p>Click the button below to create a new password:</p>
 			<p><a href="{{.ResetURL}}" class="button">Reset Password</a></p>
 			<p>Or copy and paste this link into your browser:</p>
-			<p>{{.ResetURL}}</p>
+			<p class="reset-link">{{.ResetURL}}</p>
 			<p>This link will expire in 1 hour.</p>
 			<div class="footer">
 				<p>If you didn't request a password reset, you can safely ignore this email.</p>
