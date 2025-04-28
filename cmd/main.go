@@ -104,6 +104,13 @@ func main() {
 
 	// Root route for SPA
 	router.GET("/", func(c *gin.Context) {
+		log.Println("Attempting to serve index.html from ./frontend/dist/index.html")
+		// Check if file exists
+		if _, err := os.Stat("./frontend/dist/index.html"); os.IsNotExist(err) {
+			log.Println("ERROR: Frontend file ./frontend/dist/index.html not found!")
+			c.String(404, "Frontend files not found. Build may be incomplete.")
+			return
+		}
 		c.File("./frontend/dist/index.html")
 	})
 
