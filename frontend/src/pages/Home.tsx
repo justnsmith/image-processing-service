@@ -22,8 +22,7 @@ const Home: React.FC = () => {
                                 Image Processing Service
                             </h1>
                             <p className="text-xl text-[var(--text-secondary)] mb-8 leading-relaxed">
-                                A full-stack image processing application with robust backend services
-                                for secure storage, efficient processing, and reliable data management.
+                                A full-stack image processing application with advanced backend services for secure storage, efficient processing, and dependable data management.
                             </p>
 
                             <div className="flex gap-4">
@@ -233,51 +232,30 @@ const Home: React.FC = () => {
                             This application demonstrates a full-stack implementation with a focus on secure authentication, backend development, and cloud architecture. The Go backend handles all the heavy lifting for user management, email verification, image processing, and storage, while the React frontend provides a user-friendly interface.
                         </p>
                         <div className="mt-5 flex flex-wrap gap-3">
-                            {["Go", "PostgreSQL", "Redis", "Amazon S3", "React", "TypeScript", "JWT Auth", "Email Verification", "Vite", "Tailwind CSS"].map((tech, i) => (
-                                <span key={i} className="px-3 py-1 bg-[var(--background-dark)] text-[var(--primary-light)] text-sm rounded border border-[rgba(255,255,255,0.1)]">
+                            {[
+                                "Go",
+                                "PostgreSQL",
+                                "Redis",
+                                "Amazon S3",
+                                "React",
+                                "TypeScript",
+                                "JWT Auth",
+                                "Email Verification",
+                                "Vite",
+                                "Tailwind CSS",
+                            ].map((tech, i) => (
+                                <span
+                                    key={i}
+                                    className="px-3 py-1 bg-[var(--background-dark)] text-[var(--primary-light)] text-sm rounded border border-[rgba(255,255,255,0.1)]"
+                                >
                                     {tech}
                                 </span>
                             ))}
                         </div>
-
-                        {/* GitHub Repository */}
-                        <div className="mt-5 p-4 bg-[var(--background-dark)] rounded-lg border border-[rgba(255,255,255,0.1)] flex items-center justify-between">
-                            <div className="flex items-center">
-                                <svg
-                                    xmlns="http://www.w3.org/2000/svg"
-                                    width="24"
-                                    height="24"
-                                    viewBox="0 0 24 24"
-                                    fill="none"
-                                    stroke="currentColor"
-                                    strokeWidth="2"
-                                    strokeLinecap="round"
-                                    strokeLinejoin="round"
-                                    className="text-[var(--primary-light)] mr-3"
-                                >
-                                    <path d="M9 19c-5 1.5-5-2.5-7-3m14 6v-3.87a3.37 3.37 0 0 0-.94-2.61c3.14-.35 6.44-1.54 6.44-7A5.44 5.44 0 0 0 20 4.77 5.07 5.07 0 0 0 19.91 1S18.73.65 16 2.48a13.38 13.38 0 0 0-7 0C6.27.65 5.09 1 5.09 1A5.07 5.07 0 0 0 5 4.77a5.44 5.44 0 0 0-1.5 3.78c0 5.42 3.3 6.61 6.44 7A3.37 3.37 0 0 0 9 18.13V22"></path>
-                                </svg>
-                                <div>
-                                    <h3 className="font-semibold text-[var(--text-primary)]">GitHub Repository</h3>
-                                    <p className="text-sm text-[var(--text-secondary)]">justnsmith/image-processing-service</p>
-                                </div>
-                            </div>
-                            <a
-                                href="https://github.com/justnsmith/image-processing-service"
-                                target="_blank"
-                                rel="noopener noreferrer"
-                                className="bg-[var(--primary)] hover:bg-[var(--primary-dark)] text-white px-4 py-2 rounded transition-colors flex items-center"
-                            >
-                                <span>View Repo</span>
-                                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="ml-2">
-                                    <line x1="7" y1="17" x2="17" y2="7"></line>
-                                    <polyline points="7 7 17 7 17 17"></polyline>
-                                </svg>
-                            </a>
-                        </div>
                     </div>
                 </div>
             </section>
+
 
             {/* API Endpoints */}
             <section className="py-12 bg-[var(--background-dark)]">
