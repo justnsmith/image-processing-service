@@ -9,7 +9,7 @@ FROM alpine:latest
 WORKDIR /root/
 RUN apk add --no-cache bash ca-certificates tzdata
 COPY --from=builder /app/main .
-COPY .env .
+RUN touch .env
 COPY schema.sql .
 ENV AWS_REGION=us-west-2
 EXPOSE 8080
