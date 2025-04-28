@@ -101,6 +101,7 @@ func main() {
 
 	// Serve static files for frontend assets first
 	router.Static("/assets", "./frontend/dist/assets")
+	router.Static("/static", "./frontend/public")
 
 	// Root route for SPA
 	router.GET("/", func(c *gin.Context) {
