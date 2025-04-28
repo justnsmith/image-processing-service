@@ -110,6 +110,7 @@ func main() {
 	// Serve static files for frontend assets
 	router.Static("/assets", "./frontend/dist/assets")
 	router.Static("/static", "./frontend/dist")
+	router.StaticFile("/favicon.ico", "./frontend/dist/ips.png")
 
 	// Add absolute path route that was working
 	absDistPath := filepath.Join(currentDir, "frontend/dist")
