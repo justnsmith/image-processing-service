@@ -58,7 +58,7 @@ export const ImageComparisonSlider: React.FC<ImageComparisonSliderProps> = ({
         >
             {/* Original image (behind) */}
             <img
-                src={"/static/after.jpg"}
+                src={"/after.jpg"}
                 alt={alt}
                 className="w-full h-auto"
             />
@@ -69,7 +69,7 @@ export const ImageComparisonSlider: React.FC<ImageComparisonSliderProps> = ({
                 style={{ width: `${sliderPosition}%` }}
             >
                 <img
-                    src={"/static/before.jpg"}
+                    src={"/before.jpg"}
                     alt={alt}
                     className="w-full h-auto"
                     style={{
