@@ -353,3 +353,89 @@ func GetImageStatusHandler(c *gin.Context) {
 
 	c.JSON(http.StatusOK, response)
 }
+
+// ForgotPasswordHandler handles requests to reset a password
+func ForgotPasswordHandler(c *gin.Context) {
+	var req models.ForgotPasswordRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid input"})
+		return
+	}
+
+	// Check if user exists (but don't tell the user whether the account exists)
+	user, err := db.GetUserByEmail(req.Email)
+	if err != nil {
+		// Even if user doesn't exist, return success to prevent email enumeration
+		c.JSON(http.StatusOK, gin.H{"message": "If your email exists in our system, you will receive a password reset link"})
+		return
+	}
+
+	// Generate reset token
+	token, err := db.CreatePasswordResetToken(user.Email)
+	if err != nil {
+		fmt.Printf("Error creating reset token: %v\n", err)
+		c.JSON(http.StatusOK, gin.H{"message": "If your email exists in our system, you will receive a password reset link"})
+		return
+	}
+
+	// Send reset email
+	err = utils.SendPasswordResetEmail(user.Email, token)
+	if err != nil {
+		fmt.Printf("Error sending reset email: %v\n", err)
+		c.JSON(http.StatusOK, gin.H{"message": "If your email exists in our system, you will receive a password reset link"})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{"message": "Password reset link sent to your email"})
+}
+
+// VerifyResetTokenHandler verifies if a reset token is valid
+func VerifyResetTokenHandler(c *gin.Context) {
+	var req models.VerifyResetTokenRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid input"})
+		return
+	}
+
+	email, err := db.VerifyResetToken(req.Token)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid or expired reset token"})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{
+		"message": "Token verified successfully",
+		"email": email,
+	})
+}
+
+// ResetPasswordHandler handles setting a new password using a reset token
+func ResetPasswordHandler(c *gin.Context) {
+	var req models.ResetPasswordRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid input"})
+		return
+	}
+
+	// Basic password validation
+	if len(req.NewPassword) < 8 {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Password must be at least 8 characters"})
+		return
+	}
+
+	// Verify the token is valid
+	email, err := db.VerifyResetToken(req.Token)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid or expired reset token"})
+		return
+	}
+
+	// Update the password
+	err = db.UpdatePassword(email, req.NewPassword)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to update password"})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{"message": "Password has been reset successfully"})
+}

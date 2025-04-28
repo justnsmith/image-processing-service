@@ -4,10 +4,12 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"image-processing-service/internal/auth"
 	"image-processing-service/internal/models"
 	"time"
 
 	"github.com/jackc/pgx/v4"
+	"golang.org/x/crypto/bcrypt"
 )
 
 // CreateUser creates a new user with verification token and returns the user ID
@@ -30,42 +32,42 @@ func CreateUser(user models.User) (string, error) {
 
 // GetUserByEmail retrieves a user by email
 func GetUserByEmail(email string) (models.User, error) {
-    pool, err := GetDBPool()
-    if err != nil {
-        return models.User{}, err
-    }
+	pool, err := GetDBPool()
+	if err != nil {
+		return models.User{}, err
+	}
 
-    var user models.User
+	var user models.User
 
-    // Step 1: Get the core user info first (guaranteed non-null fields)
-    err = pool.QueryRow(context.Background(),
-        `SELECT id, email, password, verified FROM users WHERE LOWER(email) = LOWER($1)`,
-        email,
-    ).Scan(&user.ID, &user.Email, &user.Password, &user.Verified)
+	// Step 1: Get the core user info first (guaranteed non-null fields)
+	err = pool.QueryRow(context.Background(),
+		`SELECT id, email, password, verified FROM users WHERE LOWER(email) = LOWER($1)`,
+		email,
+	).Scan(&user.ID, &user.Email, &user.Password, &user.Verified)
 
-    if err != nil {
-        fmt.Printf("Login error: %v\n", err)
-        return models.User{}, err
-    }
+	if err != nil {
+		fmt.Printf("Login error: %v\n", err)
+		return models.User{}, err
+	}
 
-    // Step 2: If verification fields might be null, query them separately
-    // and handle any errors silently
-    var verificationToken string
-    var verificationExpiry time.Time
+	// Step 2: If verification fields might be null, query them separately
+	// and handle any errors silently
+	var verificationToken string
+	var verificationExpiry time.Time
 
-    err = pool.QueryRow(context.Background(),
-        `SELECT verification_token, verification_expiry
+	err = pool.QueryRow(context.Background(),
+		`SELECT verification_token, verification_expiry
          FROM users WHERE id = $1 AND verification_token IS NOT NULL`,
-         user.ID,
-    ).Scan(&verificationToken, &verificationExpiry)
+		user.ID,
+	).Scan(&verificationToken, &verificationExpiry)
 
-    // Only set if we got results back (no error)
-    if err == nil {
-        user.VerificationToken = verificationToken
-        user.VerificationExpiry = &verificationExpiry
-    }
+	// Only set if we got results back (no error)
+	if err == nil {
+		user.VerificationToken = verificationToken
+		user.VerificationExpiry = &verificationExpiry
+	}
 
-    return user, nil
+	return user, nil
 }
 
 // GetUserByID retrieves a user by ID
@@ -307,4 +309,96 @@ func GetUserImages(userID string) ([]models.ImageMeta, error) {
 	}
 
 	return images, nil
+}
+
+// CreatePasswordResetToken generates a reset token for a user and saves it to the database
+func CreatePasswordResetToken(email string) (string, error) {
+	pool, err := GetDBPool()
+	if err != nil {
+		return "", err
+	}
+
+	// Generate token and expiry
+	token, err := auth.GenerateToken()
+	if err != nil {
+		return "", err
+	}
+
+	// Set expiry to 1 hour from now
+	expiry := time.Now().Add(1 * time.Hour)
+
+	// Update user with reset token
+	result, err := pool.Exec(context.Background(),
+		`UPDATE users SET reset_token = $1, reset_token_expiry = $2
+		WHERE LOWER(email) = LOWER($3)`,
+		token, expiry, email,
+	)
+
+	if err != nil {
+		return "", err
+	}
+
+	rowsAffected := result.RowsAffected()
+	if rowsAffected == 0 {
+		return "", errors.New("user not found")
+	}
+
+	return token, nil
+}
+
+// VerifyResetToken checks if a reset token is valid and returns the user's email
+func VerifyResetToken(token string) (string, error) {
+	pool, err := GetDBPool()
+	if err != nil {
+		return "", err
+	}
+
+	var email string
+	var expiry time.Time
+
+	err = pool.QueryRow(context.Background(),
+		`SELECT email, reset_token_expiry
+		FROM users
+		WHERE reset_token = $1`,
+		token,
+	).Scan(&email, &expiry)
+
+	if err != nil {
+		if err == pgx.ErrNoRows {
+			return "", errors.New("invalid or expired reset token")
+		}
+		return "", err
+	}
+
+	// Check if token has expired
+	if time.Now().After(expiry) {
+		return "", errors.New("reset token has expired")
+	}
+
+	return email, nil
+}
+
+// UpdatePassword updates a user's password and clears the reset token
+func UpdatePassword(email string, newPassword string) error {
+	pool, err := GetDBPool()
+	if err != nil {
+		return err
+	}
+
+	// Hash the new password
+	hashedPassword, err := bcrypt.GenerateFromPassword([]byte(newPassword), bcrypt.DefaultCost)
+	if err != nil {
+		return err
+	}
+
+	_, err = pool.Exec(context.Background(),
+		`UPDATE users SET
+		    password = $1,
+		    reset_token = NULL,
+		    reset_token_expiry = NULL
+		WHERE LOWER(email) = LOWER($2)`,
+		string(hashedPassword), email,
+	)
+
+	return err
 }

@@ -129,3 +129,92 @@ func parseVerificationTemplate(token, username string) (string, error) {
 
 	return tpl.String(), nil
 }
+
+func SendPasswordResetEmail(to, token string) error {
+	config := GetEmailConfig()
+
+	// Create new message
+	m := gomail.NewMessage()
+	m.SetHeader("From", fmt.Sprintf("%s <%s>", config.FromName, config.FromEmail))
+	m.SetHeader("To", to)
+	m.SetHeader("Subject", "Reset Your Password")
+
+	// Prepare email body using template
+	body, err := parsePasswordResetTemplate(token, to)
+	if err != nil {
+		return err
+	}
+	m.SetBody("text/html", body)
+
+	// Setup dialer with SMTP server details
+	d := gomail.NewDialer(config.Host, config.Port, config.Username, config.Password)
+
+	// Send email
+	if err := d.DialAndSend(m); err != nil {
+		return err
+	}
+	return nil
+}
+
+func parsePasswordResetTemplate(token, email string) (string, error) {
+	baseURL := os.Getenv("FRONTEND_URL")
+	if baseURL == "" {
+		baseURL = "http://localhost:3000"
+	}
+
+	resetURL := fmt.Sprintf("%s/reset-password?token=%s", baseURL, token)
+
+	// Email template
+	const emailTemplate = `
+	<!DOCTYPE html>
+	<html>
+	<head>
+		<meta charset="UTF-8">
+		<title>Reset Your Password</title>
+		<style>
+			body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 0 auto; padding: 20px; }
+			.container { background-color: #f7f8fa; border-radius: 5px; padding: 30px; box-shadow: 0 2px 5px rgba(0,0,0,0.1); }
+			.button { display: inline-block; background-color: #4754D2; color: white; text-decoration: none; padding: 10px 20px; border-radius: 5px; font-weight: bold; }
+			h1 { color: #222; margin-bottom: 20px; }
+			.footer { margin-top: 30px; font-size: 12px; color: #777; }
+		</style>
+	</head>
+	<body>
+		<div class="container">
+			<h1>Reset Your Password</h1>
+			<p>We received a request to reset your password. Click the button below to create a new password:</p>
+			<p><a href="{{.ResetURL}}" class="button">Reset Password</a></p>
+			<p>Or copy and paste this link into your browser:</p>
+			<p>{{.ResetURL}}</p>
+			<p>This link will expire in 1 hour.</p>
+			<div class="footer">
+				<p>If you didn't request a password reset, you can safely ignore this email.</p>
+			</div>
+		</div>
+	</body>
+	</html>
+	`
+
+	// Create a template and parse the template string
+	tmpl, err := template.New("password_reset_email").Parse(emailTemplate)
+	if err != nil {
+		return "", err
+	}
+
+	// Prepare data for template
+	data := struct {
+		Email    string
+		ResetURL string
+	}{
+		Email:    email,
+		ResetURL: resetURL,
+	}
+
+	// Execute template with data
+	var tpl bytes.Buffer
+	if err := tmpl.Execute(&tpl, data); err != nil {
+		return "", err
+	}
+
+	return tpl.String(), nil
+}

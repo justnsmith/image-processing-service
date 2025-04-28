@@ -5,7 +5,9 @@ CREATE TABLE IF NOT EXISTS users (
     verified BOOLEAN DEFAULT false,
     verification_token VARCHAR(255),
     verification_expiry TIMESTAMP,
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    reset_token VARCHAR(255),
+    reset_token_expiry TIMESTAMP
 );
 
 CREATE TABLE IF NOT EXISTS images (

@@ -55,3 +55,19 @@ type ImageMeta struct {
 	Status       string    `json:"status"`        // pending, processing, completed, failed
 	ProcessedURL string    `json:"processed_url"` // URL to processed image (if completed)
 }
+
+// ForgotPasswordRequest represents a request to reset a password
+type ForgotPasswordRequest struct {
+	Email string `json:"email" binding:"required,email"`
+}
+
+// VerifyResetTokenRequest represents a request to verify a reset token
+type VerifyResetTokenRequest struct {
+	Token string `json:"token" binding:"required"`
+}
+
+// ResetPasswordRequest represents a request to set a new password with a token
+type ResetPasswordRequest struct {
+	Token       string `json:"token" binding:"required"`
+	NewPassword string `json:"new_password" binding:"required"`
+}

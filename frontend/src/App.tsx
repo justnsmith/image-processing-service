@@ -7,15 +7,15 @@ import Register from './pages/Register';
 import Dashboard from './pages/Dashboard';
 import VerifyEmail from './pages/VerifyEmail';
 import ResendVerification from './pages/ResendVerification';
+import ForgotPassword from './pages/ForgotPassword';
+import ResetPassword from './pages/ResetPassword';
 
 // ProtectedRoute Component
 const ProtectedRoute: React.FC<{ children: React.ReactNode }> = ({ children }) => {
     const { isAuthenticated, isLoading } = useAuth();
-
     if (isLoading) {
         return <div className="loading">Loading...</div>;
     }
-
     return isAuthenticated ? <>{children}</> : <Navigate to="/login" replace />;
 };
 
@@ -28,6 +28,8 @@ const AppRoutes: React.FC = () => {
             <Route path="/register" element={<Register />} />
             <Route path="/verify-email" element={<VerifyEmail />} />
             <Route path="/resend-verification" element={<ResendVerification />} />
+            <Route path="/forgot-password" element={<ForgotPassword />} />
+            <Route path="/reset-password" element={<ResetPassword />} />
             <Route
                 path="/dashboard"
                 element={

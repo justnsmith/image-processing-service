@@ -209,3 +209,42 @@ export const getImageStatus = async (imageId: string): Promise<{ status: string,
     }
     return response.json();
 };
+
+export const forgotPassword = async (email: string): Promise<{ message: string }> => {
+    const response = await fetch(`${API_URL}/forgot-password`, {
+        method: 'POST',
+        headers,
+        body: JSON.stringify({ email }),
+    });
+    if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.error || 'Failed to process password reset request');
+    }
+    return response.json();
+};
+
+export const verifyResetToken = async (token: string): Promise<{ message: string, email: string }> => {
+    const response = await fetch(`${API_URL}/verify-reset-token`, {
+        method: 'POST',
+        headers,
+        body: JSON.stringify({ token }),
+    });
+    if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.error || 'Invalid or expired reset token');
+    }
+    return response.json();
+};
+
+export const resetPassword = async (token: string, newPassword: string): Promise<{ message: string }> => {
+    const response = await fetch(`${API_URL}/reset-password`, {
+        method: 'POST',
+        headers,
+        body: JSON.stringify({ token, new_password: newPassword }),
+    });
+    if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.error || 'Failed to reset password');
+    }
+    return response.json();
+};
