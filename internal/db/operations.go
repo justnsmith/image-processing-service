@@ -402,3 +402,19 @@ func UpdatePassword(email string, newPassword string) error {
 
 	return err
 }
+
+func GetUserImageCount(userID string) (int, error) {
+	pool, err := GetDBPool()
+	if err != nil {
+		return 0, err
+	}
+
+	var count int
+	err = pool.QueryRow(context.Background(),
+		`SELECT COUNT(*) FROM images WHERE user_id = $1`,
+		userID).Scan(&count)
+
+	return count, err
+}
+
+

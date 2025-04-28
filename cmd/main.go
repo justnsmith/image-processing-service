@@ -120,6 +120,9 @@ func main() {
 		authorized.GET("/profile", handler.GetUserProfileHandler)
 		authorized.GET("/images", handler.GetUserImagesHandler)
 
+		// Add new image count endpoint
+		authorized.GET("/images/count", handler.GetUserImageCountHandler)
+
 		// Image status endpoint
 		authorized.GET("/images/:id/status", handler.GetImageStatusHandler)
 

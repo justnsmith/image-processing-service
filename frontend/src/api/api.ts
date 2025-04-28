@@ -248,3 +248,15 @@ export const resetPassword = async (token: string, newPassword: string): Promise
     }
     return response.json();
 };
+
+export const getUserImageCount = async (): Promise<{ count: number }> => {
+    const response = await fetch(`${API_URL}/images/count`, {
+      method: 'GET',
+      headers: authHeaders(),
+    });
+    if (!response.ok) {
+      const error = await response.json();
+      throw new Error(error.error || 'Failed to fetch image count');
+    }
+    return response.json();
+  };

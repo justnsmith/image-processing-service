@@ -16,55 +16,55 @@ import (
 
 // LoginHandler handles login requests
 func LoginHandler(c *gin.Context) {
-    // Parse login request
-    var req models.LoginRequest
-    if err := c.ShouldBindJSON(&req); err != nil {
-        c.JSON(400, gin.H{"error": "Invalid request"})
-        return
-    }
+	// Parse login request
+	var req models.LoginRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(400, gin.H{"error": "Invalid request"})
+		return
+	}
 
-    // Log the login attempt
-    fmt.Printf("Login attempt for email: %s\n", req.Email)
+	// Log the login attempt
+	fmt.Printf("Login attempt for email: %s\n", req.Email)
 
-    // Get user by email (the GetUserByEmail function now handles case insensitivity)
-    user, err := db.GetUserByEmail(req.Email)
-    if err != nil {
-        fmt.Printf("Login error: %v\n", err)
-        c.JSON(401, gin.H{"error": "Invalid email or password"})
-        return
-    }
+	// Get user by email (the GetUserByEmail function now handles case insensitivity)
+	user, err := db.GetUserByEmail(req.Email)
+	if err != nil {
+		fmt.Printf("Login error: %v\n", err)
+		c.JSON(401, gin.H{"error": "Invalid email or password"})
+		return
+	}
 
-    // Check password
-    if !auth.CheckPassword(user.Password, req.Password) {
-        fmt.Printf("Password mismatch for user: %s\n", user.Email)
-        c.JSON(401, gin.H{"error": "Invalid email or password"})
-        return
-    }
+	// Check password
+	if !auth.CheckPassword(user.Password, req.Password) {
+		fmt.Printf("Password mismatch for user: %s\n", user.Email)
+		c.JSON(401, gin.H{"error": "Invalid email or password"})
+		return
+	}
 
-    // Check if user is verified
-    if !user.Verified {
-        fmt.Printf("User not verified: %s\n", user.Email)
-        c.JSON(401, gin.H{"error": "Email not verified"})
-        return
-    }
+	// Check if user is verified
+	if !user.Verified {
+		fmt.Printf("User not verified: %s\n", user.Email)
+		c.JSON(401, gin.H{"error": "Email not verified"})
+		return
+	}
 
-    // Generate JWT token
-    token, err := auth.GenerateJWT(user.ID)
-    if err != nil {
-        fmt.Printf("Failed to generate token: %v\n", err)
-        c.JSON(500, gin.H{"error": "Failed to generate token"})
-        return
-    }
+	// Generate JWT token
+	token, err := auth.GenerateJWT(user.ID)
+	if err != nil {
+		fmt.Printf("Failed to generate token: %v\n", err)
+		c.JSON(500, gin.H{"error": "Failed to generate token"})
+		return
+	}
 
-    // Log successful login
-    fmt.Printf("Login successful for user: %s (ID: %s)\n", user.Email, user.ID)
+	// Log successful login
+	fmt.Printf("Login successful for user: %s (ID: %s)\n", user.Email, user.ID)
 
-    // Return successful response
-    c.JSON(200, gin.H{
-        "token": token,
-        "user_id": user.ID,
-        "email": user.Email,
-    })
+	// Return successful response
+	c.JSON(200, gin.H{
+		"token":   token,
+		"user_id": user.ID,
+		"email":   user.Email,
+	})
 }
 
 // RegisterHandler handles registration requests
@@ -405,7 +405,7 @@ func VerifyResetTokenHandler(c *gin.Context) {
 
 	c.JSON(http.StatusOK, gin.H{
 		"message": "Token verified successfully",
-		"email": email,
+		"email":   email,
 	})
 }
 
@@ -438,4 +438,25 @@ func ResetPasswordHandler(c *gin.Context) {
 	}
 
 	c.JSON(http.StatusOK, gin.H{"message": "Password has been reset successfully"})
+}
+
+func GetUserImageCountHandler(c *gin.Context) {
+	// Get userID from the JWT token in the context
+	userID, exists := c.Get("userID")
+	if !exists {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "User not authenticated"})
+		return
+	}
+
+	// Get count of user images from database
+	count, err := db.GetUserImageCount(userID.(string))
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to retrieve image count"})
+		return
+	}
+
+	// Return count
+	c.JSON(http.StatusOK, gin.H{
+		"count": count,
+	})
 }

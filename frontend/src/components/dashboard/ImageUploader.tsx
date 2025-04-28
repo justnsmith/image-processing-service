@@ -1,12 +1,13 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { uploadImage } from '../../api/api';
+import { uploadImage, getUserImageCount } from '../../api/api';
 import { ImageMeta } from '../../types';
 
 interface ImageUploaderProps {
     onUploadSuccess: (newImage: ImageMeta) => void;
+    currentImages?: ImageMeta[]; // Optional prop to pass current images
 }
 
-export const ImageUploader: React.FC<ImageUploaderProps> = ({ onUploadSuccess }) => {
+export const ImageUploader: React.FC<ImageUploaderProps> = ({ onUploadSuccess, currentImages }) => {
     const [file, setFile] = useState<File | null>(null);
     const [width, setWidth] = useState<number>(800);
     const [isUploading, setIsUploading] = useState(false);
@@ -22,12 +23,40 @@ export const ImageUploader: React.FC<ImageUploaderProps> = ({ onUploadSuccess })
     const [originalImageDimensions, setOriginalImageDimensions] = useState({ width: 0, height: 0 });
     const [tintColor, setTintColor] = useState('');
     const [tintPreview, setTintPreview] = useState(false);
+    const [imageCount, setImageCount] = useState<number | null>(null);
+    const [isLoadingCount, setIsLoadingCount] = useState(false);
+
+    const IMAGE_LIMIT = 20; // Define the maximum number of images allowed
 
     const fileInputRef = useRef<HTMLInputElement>(null);
     const imagePreviewRef = useRef<HTMLImageElement>(null);
     const cropPreviewRef = useRef<HTMLDivElement>(null);
     const tintOverlayRef = useRef<HTMLDivElement>(null);
     const imageContainerRef = useRef<HTMLDivElement>(null);
+
+    // Load image count on component mount
+    useEffect(() => {
+        const fetchImageCount = async () => {
+            setIsLoadingCount(true);
+            try {
+                // If currentImages prop is available, use its length
+                if (currentImages) {
+                    setImageCount(currentImages.length);
+                } else {
+                    // Otherwise fetch images from API
+                    const { count } = await getUserImageCount();
+                    setImageCount(count);
+                }
+            } catch (err) {
+                console.error("Failed to fetch image count:", err);
+                setError('Unable to check current image count');
+            } finally {
+                setIsLoadingCount(false);
+            }
+        };
+
+        fetchImageCount();
+    }, [currentImages]);
 
     // For interactive crop preview
     useEffect(() => {
@@ -98,6 +127,12 @@ export const ImageUploader: React.FC<ImageUploaderProps> = ({ onUploadSuccess })
     }, [cropWidth, showAdvanced]);
 
     const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+        // First check if we're at the image limit
+        if (imageCount !== null && imageCount >= IMAGE_LIMIT) {
+            setError(`You have reached the maximum limit of ${IMAGE_LIMIT} images. Please delete some images before uploading more.`);
+            return;
+        }
+
         if (e.target.files && e.target.files[0]) {
             const selectedFile = e.target.files[0];
             setFile(selectedFile);
@@ -141,6 +176,12 @@ export const ImageUploader: React.FC<ImageUploaderProps> = ({ onUploadSuccess })
         e.stopPropagation();
         setDragActive(false);
 
+        // First check if we're at the image limit
+        if (imageCount !== null && imageCount >= IMAGE_LIMIT) {
+            setError(`You have reached the maximum limit of ${IMAGE_LIMIT} images. Please delete some images before uploading more.`);
+            return;
+        }
+
         if (e.dataTransfer.files && e.dataTransfer.files[0]) {
             const droppedFile = e.dataTransfer.files[0];
             if (droppedFile.type.startsWith('image/')) {
@@ -175,6 +216,12 @@ export const ImageUploader: React.FC<ImageUploaderProps> = ({ onUploadSuccess })
         e.preventDefault();
         if (!file) {
             setError('Please select a file to upload');
+            return;
+        }
+
+        // Check image limit before attempting upload
+        if (imageCount !== null && imageCount >= IMAGE_LIMIT) {
+            setError(`You have reached the maximum limit of ${IMAGE_LIMIT} images. Please delete some images before uploading more.`);
             return;
         }
 
@@ -246,6 +293,11 @@ export const ImageUploader: React.FC<ImageUploaderProps> = ({ onUploadSuccess })
 
             console.log("Created new image metadata:", newImage);
             onUploadSuccess(newImage);
+
+            // Increment the image count
+            if (imageCount !== null) {
+                setImageCount(imageCount + 1);
+            }
 
             // Reset form
             setFile(null);
@@ -334,6 +386,32 @@ export const ImageUploader: React.FC<ImageUploaderProps> = ({ onUploadSuccess })
     return (
         <div className="glass-card p-6 mb-6 bg-gray-900 bg-opacity-50 backdrop-filter backdrop-blur-lg rounded-xl border border-gray-800">
             <h2 className="text-xl font-semibold mb-4 text-gray-200">Upload New Image</h2>
+
+            {/* Image count indicator */}
+            <div className="mb-4 flex items-center justify-between">
+                <div className="text-sm text-gray-300">
+                    {isLoadingCount ? (
+                        "Loading image count..."
+                    ) : (
+                        imageCount !== null ? (
+                            <div className="flex items-center">
+                                <span>Images: </span>
+                                <span className={`font-bold ml-1 ${imageCount >= IMAGE_LIMIT ? 'text-red-400' : 'text-indigo-400'}`}>
+                                    {imageCount} / {IMAGE_LIMIT}
+                                </span>
+                                {imageCount >= IMAGE_LIMIT && (
+                                    <span className="text-red-400 ml-2">
+                                        (Maximum limit reached)
+                                    </span>
+                                )}
+                            </div>
+                        ) : (
+                            "Unable to fetch image count"
+                        )
+                    )}
+                </div>
+            </div>
+
             <form onSubmit={handleSubmit}>
                 {error && (
                     <div className="bg-red-900 bg-opacity-30 text-red-300 p-3 rounded-md text-sm mb-4 border border-red-700">
@@ -344,14 +422,17 @@ export const ImageUploader: React.FC<ImageUploaderProps> = ({ onUploadSuccess })
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                     <div>
                         <div
-                            className={`mb-4 border-2 border-dashed rounded-lg p-6 text-center transition-all ${dragActive
-                                    ? 'border-indigo-500 bg-indigo-900 bg-opacity-20'
-                                    : 'border-gray-700 hover:border-gray-600'
-                                }`}
-                            onDragEnter={handleDrag}
-                            onDragOver={handleDrag}
-                            onDragLeave={handleDrag}
-                            onDrop={handleDrop}
+                            className={`mb-4 border-2 border-dashed rounded-lg p-6 text-center transition-all ${
+                                imageCount !== null && imageCount >= IMAGE_LIMIT
+                                    ? 'border-red-700 bg-red-900 bg-opacity-10 cursor-not-allowed'
+                                    : dragActive
+                                        ? 'border-indigo-500 bg-indigo-900 bg-opacity-20'
+                                        : 'border-gray-700 hover:border-gray-600'
+                            }`}
+                            onDragEnter={imageCount !== null && imageCount >= IMAGE_LIMIT ? undefined : handleDrag}
+                            onDragOver={imageCount !== null && imageCount >= IMAGE_LIMIT ? undefined : handleDrag}
+                            onDragLeave={imageCount !== null && imageCount >= IMAGE_LIMIT ? undefined : handleDrag}
+                            onDrop={imageCount !== null && imageCount >= IMAGE_LIMIT ? undefined : handleDrop}
                         >
                             <input
                                 type="file"
@@ -359,22 +440,29 @@ export const ImageUploader: React.FC<ImageUploaderProps> = ({ onUploadSuccess })
                                 onChange={handleFileChange}
                                 className="hidden"
                                 ref={fileInputRef}
+                                disabled={imageCount !== null && imageCount >= IMAGE_LIMIT}
                             />
 
                             <div className="flex flex-col items-center justify-center space-y-3">
-                                <svg className="w-12 h-12 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                                <svg className={`w-12 h-12 ${imageCount !== null && imageCount >= IMAGE_LIMIT ? 'text-red-400' : 'text-gray-400'}`} fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
                                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"></path>
                                 </svg>
-                                <p className="text-gray-300">
-                                    Drag & drop an image or{' '}
-                                    <button
-                                        type="button"
-                                        onClick={() => fileInputRef.current?.click()}
-                                        className="text-indigo-400 hover:text-indigo-300 font-medium"
-                                    >
-                                        browse
-                                    </button>
-                                </p>
+                                {imageCount !== null && imageCount >= IMAGE_LIMIT ? (
+                                    <p className="text-red-300">
+                                        You've reached the maximum limit of {IMAGE_LIMIT} images
+                                    </p>
+                                ) : (
+                                    <p className="text-gray-300">
+                                        Drag & drop an image or{' '}
+                                        <button
+                                            type="button"
+                                            onClick={() => fileInputRef.current?.click()}
+                                            className="text-indigo-400 hover:text-indigo-300 font-medium"
+                                        >
+                                            browse
+                                        </button>
+                                    </p>
+                                )}
                                 <p className="text-gray-500 text-sm">PNG, JPG, GIF up to 10MB</p>
                             </div>
                         </div>
@@ -554,7 +642,6 @@ export const ImageUploader: React.FC<ImageUploaderProps> = ({ onUploadSuccess })
                             </div>
                         )}
                     </div>
-
                     <div>
                         {previewSrc ? (
                             <div className="mb-4">
@@ -602,14 +689,15 @@ export const ImageUploader: React.FC<ImageUploaderProps> = ({ onUploadSuccess })
                             </div>
                         )}
 
-                        <div className="mt-6 flex items-center space-x-4">
+<div className="mt-6 flex items-center space-x-4">
                             <button
                                 type="submit"
-                                disabled={isUploading || !file}
-                                className={`px-4 py-2 rounded-md font-medium flex items-center ${isUploading || !file
+                                disabled={isUploading || !file || (imageCount !== null && imageCount >= IMAGE_LIMIT)}
+                                className={`px-4 py-2 rounded-md font-medium flex items-center ${
+                                    isUploading || !file || (imageCount !== null && imageCount >= IMAGE_LIMIT)
                                         ? 'bg-gray-700 text-gray-400 cursor-not-allowed'
                                         : 'bg-indigo-600 hover:bg-indigo-700 text-white transition-colors'
-                                    }`}
+                                }`}
                             >
                                 {isUploading && (
                                     <svg className="animate-spin -ml-1 mr-2 h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
