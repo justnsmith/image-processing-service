@@ -271,6 +271,11 @@ const Home: React.FC = () => {
                                     <td className="py-3 pr-6">/images/:id</td>
                                     <td className="py-3 text-[var(--text-secondary)]">Retrieve an image</td>
                                 </tr>
+                                <tr className="border-b border-[rgba(255,255,255,0.05)]">
+                                    <td className="py-3 pr-6 text-[var(--primary)]">GET</td>
+                                    <td className="py-3 pr-6">/images/count</td>
+                                    <td className="py-3 text-[var(--text-secondary)]">Get user's image count</td>
+                                </tr>
                                 <tr>
                                     <td className="py-3 pr-6 text-[var(--danger)]">DELETE</td>
                                     <td className="py-3 pr-6">/images/:id</td>
