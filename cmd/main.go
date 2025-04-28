@@ -2,12 +2,14 @@ package main
 
 import (
 	"context"
+	"fmt"
 	"image-processing-service/internal/db"
 	"image-processing-service/internal/handler"
 	"image-processing-service/internal/worker"
 	"log"
 	"os"
 	"os/signal"
+	"path/filepath"
 	"syscall"
 	"time"
 
@@ -86,6 +88,33 @@ func main() {
 	// Start the cleanup scheduler
 	scheduleCleanupTasks(ctx)
 
+	// Add debug logging to show current working directory
+	currentDir, err := os.Getwd()
+	if err != nil {
+		log.Printf("WARNING: Unable to get current working directory: %v", err)
+	} else {
+		log.Printf("Current working directory: %s", currentDir)
+	}
+
+	// Check if static directories exist and list their contents
+	staticDirs := []string{"./frontend/dist", "./frontend/dist/assets", "./frontend/public"}
+	for _, dir := range staticDirs {
+		if _, err := os.Stat(dir); os.IsNotExist(err) {
+			log.Printf("WARNING: Static directory %s doesn't exist!", dir)
+		} else {
+			// List the files in the directory
+			files, err := os.ReadDir(dir)
+			if err != nil {
+				log.Printf("Error reading directory %s: %v", dir, err)
+			} else {
+				log.Printf("Files in %s:", dir)
+				for _, file := range files {
+					log.Printf("- %s", file.Name())
+				}
+			}
+		}
+	}
+
 	// Set up Gin
 	router := gin.Default()
 
@@ -99,9 +128,42 @@ func main() {
 		MaxAge:           12 * time.Hour,
 	}))
 
+	// Add a debug endpoint to check files
+	router.GET("/debug-files", func(c *gin.Context) {
+		currentDir, _ := os.Getwd()
+		result := map[string]interface{}{
+			"currentDir": currentDir,
+			"files":      map[string]interface{}{},
+		}
+
+		// Check various potential locations
+		locations := []string{"./frontend/dist", "./frontend/public", "./frontend/dist/assets"}
+		filesMap := make(map[string]interface{})
+		for _, loc := range locations {
+			files, err := os.ReadDir(loc)
+			if err != nil {
+				filesMap[loc] = fmt.Sprintf("Error: %v", err)
+			} else {
+				fileNames := []string{}
+				for _, file := range files {
+					fileNames = append(fileNames, file.Name())
+				}
+				filesMap[loc] = fileNames
+			}
+		}
+		result["files"] = filesMap
+
+		c.JSON(200, result)
+	})
+
 	// Serve static files for frontend assets first
 	router.Static("/assets", "./frontend/dist/assets")
 	router.Static("/static", "./frontend/dist")
+
+	// Try with absolute paths as well
+	absDistPath := filepath.Join(currentDir, "frontend/dist")
+	log.Printf("Absolute path to dist: %s", absDistPath)
+	router.Static("/abs-static", absDistPath)
 
 	// Root route for SPA
 	router.GET("/", func(c *gin.Context) {
