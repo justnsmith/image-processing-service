@@ -67,10 +67,28 @@ const Home: React.FC = () => {
                         Project Features
                     </h2>
 
-                    <div className="grid md:grid-cols-2 gap-8">
+                    <div className="grid md:grid-cols-3 gap-8">
                         <div className="bg-[var(--card-dark)] p-8 rounded-lg shadow-md border border-[rgba(255,255,255,0.1)] hover:border-[var(--primary)] transition-colors">
                             <h3 className="text-2xl font-semibold mb-4 text-[var(--text-primary)] flex items-center">
                                 <span className="bg-[rgba(99,102,241,0.2)] text-[var(--primary-light)] p-2 rounded-full mr-3">1</span>
+                                Secure Authentication
+                            </h3>
+                            <p className="text-[var(--text-secondary)]">
+                                Complete user management with:
+                            </p>
+                            <ul className="mt-3 space-y-2 text-[var(--text-secondary)]">
+                                <li>• Email verification system</li>
+                                <li>• Secure password reset flow</li>
+                                <li>• JWT token-based authentication</li>
+                            </ul>
+                            <div className="mt-5 text-sm text-[var(--primary-light)] bg-[var(--background-dark)] p-3 rounded font-mono">
+                // Implemented with Go + JWT
+                            </div>
+                        </div>
+
+                        <div className="bg-[var(--card-dark)] p-8 rounded-lg shadow-md border border-[rgba(255,255,255,0.1)] hover:border-[var(--primary)] transition-colors">
+                            <h3 className="text-2xl font-semibold mb-4 text-[var(--text-primary)] flex items-center">
+                                <span className="bg-[rgba(99,102,241,0.2)] text-[var(--primary-light)] p-2 rounded-full mr-3">2</span>
                                 Secure Storage
                             </h3>
                             <p className="text-[var(--text-secondary)]">
@@ -88,7 +106,7 @@ const Home: React.FC = () => {
 
                         <div className="bg-[var(--card-dark)] p-8 rounded-lg shadow-md border border-[rgba(255,255,255,0.1)] hover:border-[var(--primary)] transition-colors">
                             <h3 className="text-2xl font-semibold mb-4 text-[var(--text-primary)] flex items-center">
-                                <span className="bg-[rgba(99,102,241,0.2)] text-[var(--primary-light)] p-2 rounded-full mr-3">2</span>
+                                <span className="bg-[rgba(99,102,241,0.2)] text-[var(--primary-light)] p-2 rounded-full mr-3">3</span>
                                 Image Processing
                             </h3>
                             <p className="text-[var(--text-secondary)]">
@@ -107,6 +125,79 @@ const Home: React.FC = () => {
                 </div>
             </section>
 
+            {/* Authentication Flow Section */}
+            <section className="py-16 bg-[var(--background-dark)] border-t border-[var(--card-dark)]">
+                <div className="max-w-6xl mx-auto px-4">
+                    <h2 className="text-3xl font-bold mb-10 text-center text-[var(--primary-light)]">
+                        Secure Authentication Flow
+                    </h2>
+
+                    <div className="grid md:grid-cols-2 gap-12">
+                        <div className="bg-[var(--card-dark)] p-6 rounded-lg border border-[rgba(255,255,255,0.1)] shadow-md">
+                            <h3 className="text-xl font-semibold mb-4 text-[var(--primary-light)]">
+                                User Registration & Verification
+                            </h3>
+                            <ol className="space-y-3 text-[var(--text-secondary)]">
+                                <li className="flex">
+                                    <span className="bg-[rgba(99,102,241,0.2)] text-[var(--primary-light)] h-6 w-6 rounded-full flex items-center justify-center mr-3 flex-shrink-0">1</span>
+                                    <span>User creates account with email & password</span>
+                                </li>
+                                <li className="flex">
+                                    <span className="bg-[rgba(99,102,241,0.2)] text-[var(--primary-light)] h-6 w-6 rounded-full flex items-center justify-center mr-3 flex-shrink-0">2</span>
+                                    <span>Verification email sent automatically</span>
+                                </li>
+                                <li className="flex">
+                                    <span className="bg-[rgba(99,102,241,0.2)] text-[var(--primary-light)] h-6 w-6 rounded-full flex items-center justify-center mr-3 flex-shrink-0">3</span>
+                                    <span>User clicks verification link with secure token</span>
+                                </li>
+                                <li className="flex">
+                                    <span className="bg-[rgba(99,102,241,0.2)] text-[var(--primary-light)] h-6 w-6 rounded-full flex items-center justify-center mr-3 flex-shrink-0">4</span>
+                                    <span>Account activated for full access</span>
+                                </li>
+                            </ol>
+                            <div className="mt-6 text-right">
+                                <Link to="/register">
+                                    <Button variant="outline" className="border border-[var(--primary)] text-[var(--primary-light)] hover:bg-[rgba(99,102,241,0.15)]">
+                                        Create Account
+                                    </Button>
+                                </Link>
+                            </div>
+                        </div>
+
+                        <div className="bg-[var(--card-dark)] p-6 rounded-lg border border-[rgba(255,255,255,0.1)] shadow-md">
+                            <h3 className="text-xl font-semibold mb-4 text-[var(--primary-light)]">
+                                Password Recovery
+                            </h3>
+                            <ol className="space-y-3 text-[var(--text-secondary)]">
+                                <li className="flex">
+                                    <span className="bg-[rgba(99,102,241,0.2)] text-[var(--primary-light)] h-6 w-6 rounded-full flex items-center justify-center mr-3 flex-shrink-0">1</span>
+                                    <span>User requests password reset via email</span>
+                                </li>
+                                <li className="flex">
+                                    <span className="bg-[rgba(99,102,241,0.2)] text-[var(--primary-light)] h-6 w-6 rounded-full flex items-center justify-center mr-3 flex-shrink-0">2</span>
+                                    <span>Secure token generated and emailed</span>
+                                </li>
+                                <li className="flex">
+                                    <span className="bg-[rgba(99,102,241,0.2)] text-[var(--primary-light)] h-6 w-6 rounded-full flex items-center justify-center mr-3 flex-shrink-0">3</span>
+                                    <span>Token verified on password reset page</span>
+                                </li>
+                                <li className="flex">
+                                    <span className="bg-[rgba(99,102,241,0.2)] text-[var(--primary-light)] h-6 w-6 rounded-full flex items-center justify-center mr-3 flex-shrink-0">4</span>
+                                    <span>User creates new password securely</span>
+                                </li>
+                            </ol>
+                            <div className="mt-6 text-right">
+                                <Link to="/forgot-password">
+                                    <Button variant="outline" className="border border-[var(--primary)] text-[var(--primary-light)] hover:bg-[rgba(99,102,241,0.15)]">
+                                        Reset Password
+                                    </Button>
+                                </Link>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
             {/* Project Overview */}
             <section className="py-12 bg-[var(--background-dark)]">
                 <div className="max-w-6xl mx-auto px-4">
@@ -115,10 +206,10 @@ const Home: React.FC = () => {
                             Project Overview
                         </h2>
                         <p className="text-[var(--text-secondary)] text-lg">
-                            This application demonstrates a full-stack implementation with a focus on backend development and cloud architecture. The Go backend handles all the heavy lifting for image processing and storage, while the React frontend provides a user-friendly interface.
+                            This application demonstrates a full-stack implementation with a focus on secure authentication, backend development, and cloud architecture. The Go backend handles all the heavy lifting for user management, email verification, image processing, and storage, while the React frontend provides a user-friendly interface.
                         </p>
                         <div className="mt-5 flex flex-wrap gap-3">
-                            {["Go", "PostgreSQL", "Redis", "Amazon S3", "React", "TypeScript", "Vite", "Tailwind CSS"].map((tech, i) => (
+                            {["Go", "PostgreSQL", "Redis", "Amazon S3", "React", "TypeScript", "JWT Auth", "Email Verification", "Vite", "Tailwind CSS"].map((tech, i) => (
                                 <span key={i} className="px-3 py-1 bg-[var(--background-dark)] text-[var(--primary-light)] text-sm rounded border border-[rgba(255,255,255,0.1)]">
                                     {tech}
                                 </span>
@@ -147,17 +238,42 @@ const Home: React.FC = () => {
                             <tbody className="text-[var(--text-primary)]">
                                 <tr className="border-b border-[rgba(255,255,255,0.05)]">
                                     <td className="py-3 pr-6 text-[var(--success)]">POST</td>
-                                    <td className="py-3 pr-6">/api/images/upload</td>
+                                    <td className="py-3 pr-6">/register</td>
+                                    <td className="py-3 text-[var(--text-secondary)]">Create new user account</td>
+                                </tr>
+                                <tr className="border-b border-[rgba(255,255,255,0.05)]">
+                                    <td className="py-3 pr-6 text-[var(--success)]">POST</td>
+                                    <td className="py-3 pr-6">/login</td>
+                                    <td className="py-3 text-[var(--text-secondary)]">Authenticate user</td>
+                                </tr>
+                                <tr className="border-b border-[rgba(255,255,255,0.05)]">
+                                    <td className="py-3 pr-6 text-[var(--success)]">POST</td>
+                                    <td className="py-3 pr-6">/verify-email</td>
+                                    <td className="py-3 text-[var(--text-secondary)]">Verify user email address</td>
+                                </tr>
+                                <tr className="border-b border-[rgba(255,255,255,0.05)]">
+                                    <td className="py-3 pr-6 text-[var(--success)]">POST</td>
+                                    <td className="py-3 pr-6">/forgot-password</td>
+                                    <td className="py-3 text-[var(--text-secondary)]">Request password reset</td>
+                                </tr>
+                                <tr className="border-b border-[rgba(255,255,255,0.05)]">
+                                    <td className="py-3 pr-6 text-[var(--success)]">POST</td>
+                                    <td className="py-3 pr-6">/reset-password</td>
+                                    <td className="py-3 text-[var(--text-secondary)]">Set new password with token</td>
+                                </tr>
+                                <tr className="border-b border-[rgba(255,255,255,0.05)]">
+                                    <td className="py-3 pr-6 text-[var(--success)]">POST</td>
+                                    <td className="py-3 pr-6">/upload</td>
                                     <td className="py-3 text-[var(--text-secondary)]">Upload a new image</td>
                                 </tr>
                                 <tr className="border-b border-[rgba(255,255,255,0.05)]">
                                     <td className="py-3 pr-6 text-[var(--primary)]">GET</td>
-                                    <td className="py-3 pr-6">/api/images/:id</td>
+                                    <td className="py-3 pr-6">/images/:id</td>
                                     <td className="py-3 text-[var(--text-secondary)]">Retrieve an image</td>
                                 </tr>
                                 <tr>
                                     <td className="py-3 pr-6 text-[var(--danger)]">DELETE</td>
-                                    <td className="py-3 pr-6">/api/images/:id</td>
+                                    <td className="py-3 pr-6">/images/:id</td>
                                     <td className="py-3 text-[var(--text-secondary)]">Delete an image</td>
                                 </tr>
                             </tbody>
