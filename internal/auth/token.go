@@ -6,7 +6,8 @@ import (
 	"time"
 )
 
-// GenerateToken creates a random token for email verification
+// GenerateToken creates a random token for email verification.
+// Generates a secure random byte slice and encodes it as a URL-safe base64 string.
 func GenerateToken() (string, error) {
 	b := make([]byte, 32)
 	_, err := rand.Read(b)
@@ -16,7 +17,9 @@ func GenerateToken() (string, error) {
 	return base64.URLEncoding.EncodeToString(b), nil
 }
 
-// GenerateVerificationData creates token and expiry for email verification
+// GenerateVerificationData creates token and expiry for email verification.
+// The generated token is used for identifying the user, and the expiry is set to 24 hrs.
+// Returns the generated token, its expiry time, and any errors that were encountered.
 func GenerateVerificationData() (string, time.Time, error) {
 	token, err := GenerateToken()
 	if err != nil {

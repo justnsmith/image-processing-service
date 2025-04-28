@@ -9,6 +9,7 @@ import (
 
 var Rdb *redis.Client
 
+// Initialize Redis client
 func init() {
 	// Get Redis URL from environment variable or use default
 	redisURL := os.Getenv("REDIS_URL")
@@ -27,13 +28,13 @@ func init() {
 	}
 }
 
-// EnqueueTask adds a task to the Redis queue
+// Adds a task to the Redis queue
 func EnqueueTask(ctx context.Context, task string) error {
 	// "image_tasks" is the name of the Redis list queue
 	return Rdb.LPush(ctx, "image_tasks", task).Err()
 }
 
-// DequeueTask fetches a task from the Redis queue
+// Fetches a task from the Redis queue
 func DequeueTask(ctx context.Context) (string, error) {
 	return Rdb.RPop(ctx, "image_tasks").Result()
 }

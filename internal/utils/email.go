@@ -25,7 +25,7 @@ type EmailConfig struct {
 	FromEmail string
 }
 
-// GetEmailConfig loads email configuration from environment variables
+// Loads email configuration from environment variables
 func GetEmailConfig() EmailConfig {
 	port := 587 // Default SMTP port
 	return EmailConfig{
@@ -38,7 +38,7 @@ func GetEmailConfig() EmailConfig {
 	}
 }
 
-// SendVerificationEmail sends a verification email to the user
+// Sends a verification email to the user
 func SendVerificationEmail(to, token, username string) error {
 	config := GetEmailConfig()
 
@@ -67,14 +67,13 @@ func SendVerificationEmail(to, token, username string) error {
 	return nil
 }
 
+// Parses the verification email template and returns the filled HTML string
 func parseVerificationTemplate(token, username string) (string, error) {
 	baseURL := os.Getenv("FRONTEND_URL")
 	if baseURL == "" {
-		baseURL = "http://localhost:3000" // Update this to match your React app port
+		baseURL = "http://localhost:3000"
 	}
 	verificationURL := fmt.Sprintf("%s/verify-email?token=%s", baseURL, token)
-
-	// Simple email template with white background and black text
 	const emailTemplate = `
 	<!DOCTYPE html>
 	<html>
@@ -162,6 +161,7 @@ func parseVerificationTemplate(token, username string) (string, error) {
 	return tpl.String(), nil
 }
 
+// Sends a password reset email to the user
 func SendPasswordResetEmail(to, token string) error {
 	config := GetEmailConfig()
 
@@ -188,6 +188,7 @@ func SendPasswordResetEmail(to, token string) error {
 	return nil
 }
 
+// Parses the password reset email template and returns the filled HTML string
 func parsePasswordResetTemplate(token, email string) (string, error) {
 	baseURL := os.Getenv("FRONTEND_URL")
 	if baseURL == "" {

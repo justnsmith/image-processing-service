@@ -8,7 +8,16 @@ import (
 	"path/filepath"
 )
 
-// InitDB initializes the database tables
+// InitDB initializes the database tables by executing a schema SQL file.
+// THis function will read the SQL scheme from a file and apply it to connected database
+// to set up the required tables and structures.
+//
+// The process goes through the following steps:
+//	 1. Retrieves a database connection pool by calling GetDBPool().
+//   2. Determines the curr working directory to locate schema file.
+//   3. Reads contents of schema.sql file
+//   4. Executes SQl schema using database connection pool
+//   5. Logs message indicating successful initialization.
 func InitDB() error {
     pool, err := GetDBPool()
     if err != nil {
@@ -33,7 +42,7 @@ func InitDB() error {
     if err != nil {
         return fmt.Errorf("failed to execute schema: %w", err)
     }
-   
+
     log.Println("Database initialized successfully")
     return nil
 }

@@ -12,14 +12,13 @@ import (
 	"github.com/nfnt/resize"
 )
 
-// ResizeImage resizes an image to the specified width using nearest-neighbor scaling
+// Resizes an image to the specified width using nearest-neighbor scaling
 func ResizeImage(img image.Image, width uint) image.Image {
-	// Resize the image using the nearest-neighbor algorithm
 	newImg := resize.Resize(width, 0, img, resize.NearestNeighbor)
 	return newImg
 }
 
-// DecodeImage decodes an image from byte data
+// Decodes an image from a byte slice and returns the image and its format
 func DecodeImage(data []byte) (image.Image, string, error) {
 	img, format, err := image.Decode(bytes.NewReader(data))
 	if err != nil {
@@ -28,7 +27,7 @@ func DecodeImage(data []byte) (image.Image, string, error) {
 	return img, format, nil
 }
 
-// CompressJPEG compresses the image to JPEG format with a given quality
+// Compresses the image to JPEG format with a given quality
 func CompressJPEG(img image.Image, quality int) ([]byte, error) {
 	var buf bytes.Buffer
 	err := jpeg.Encode(&buf, img, &jpeg.Options{Quality: quality})
@@ -38,7 +37,7 @@ func CompressJPEG(img image.Image, quality int) ([]byte, error) {
 	return buf.Bytes(), nil
 }
 
-// CropImage crops an image to the specified rectangle
+// Crops an image to the specified rectangle
 func CropImage(img image.Image, x, y, width, height int) image.Image {
 	// Return the original if there are invalid dimensions
 	if width <= 0 || height <= 0 {
@@ -72,8 +71,7 @@ func CropImage(img image.Image, x, y, width, height int) image.Image {
 	return cropImg
 }
 
-// AddTint applies a color tint to the image
-// AddTint applies a color tint to the image with intensity control
+// Applies a color tint to the image with intensity control
 func AddTint(img image.Image, tintColor color.Color) image.Image {
     bounds := img.Bounds()
     newImg := image.NewRGBA(bounds)
@@ -87,7 +85,7 @@ func AddTint(img image.Image, tintColor color.Color) image.Image {
     tB := float64(tintB) / 65535.0
 
     // Tint intensity (0.0 - 1.0)
-    intensity := 0.3 // Adjust this for stronger/weaker tinting
+    intensity := 0.3
 
     for y := bounds.Min.Y; y < bounds.Max.Y; y++ {
         for x := bounds.Min.X; x < bounds.Max.X; x++ {
@@ -117,7 +115,7 @@ func AddTint(img image.Image, tintColor color.Color) image.Image {
     return newImg
 }
 
-// ParseHexColor converts a hex color string to color.RGBA
+// Converts a hex color string to color.RGBA
 func ParseHexColor(hexColor string) (color.RGBA, error) {
 	if !strings.HasPrefix(hexColor, "#") || len(hexColor) != 7 {
 		return color.RGBA{}, fmt.Errorf("invalid hex color format")

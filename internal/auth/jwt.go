@@ -13,12 +13,13 @@ import (
 var secretKey []byte = []byte(os.Getenv("JWS_SECRET"))
 
 // GenerateJWT generates a new JWT token for the user.
+// Includes the user ID as subject and sets an expiration time of 24 hours
 func GenerateJWT(userID string) (string, error) {
 	// Create the JWT claims
 	claims := &jwt.RegisteredClaims{
 		Subject:   userID, // user ID to associate with the JWT
 		ExpiresAt: jwt.NewNumericDate(time.Now().Add(24 * time.Hour)), // Token expiration time
-		IssuedAt:  jwt.NewNumericDate(time.Now()),
+		IssuedAt:  jwt.NewNumericDate(time.Now()), // Set issue time to current time
 	}
 
 	// Create the token with signing method and claims
@@ -44,6 +45,7 @@ func ValidateJWT(tokenString string) (string, error) {
 		return secretKey, nil
 	})
 
+	// If error or token is invalid, retrun error
 	if err != nil || !token.Valid {
 		return "", fmt.Errorf("invalid token: %v", err)
 	}
@@ -57,8 +59,10 @@ func ValidateJWT(tokenString string) (string, error) {
 	return claims.Subject, nil
 }
 
+// compares a hashed password with plain-text password
+// Returns true if passwords match, else false
 func CheckPassword(hashedPassword, password string) bool {
-	// Compare the hashed password with the given password
+	// Uses bcrypt to compare hashed password with the provided plain-text password
 	err := bcrypt.CompareHashAndPassword([]byte(hashedPassword), []byte(password))
 	return err == nil
 }

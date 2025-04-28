@@ -22,7 +22,11 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
-// UploadImageHandler handles image uploads, stores original image, and queues processing tasks
+// Handles the image upload and processing request.
+// It receives the image file, processes it, and stores it in S3
+// while also inserting metadata into the database.
+// The function also queues the image for further processing
+// and returns the original image URL and metadata to the client.
 func UploadImageHandler(c *gin.Context, userID string) {
 	// Get the uploaded file from the request
 	fileHeader, err := c.FormFile("file")
@@ -78,7 +82,7 @@ func UploadImageHandler(c *gin.Context, userID string) {
 		Width:       originalImg.Bounds().Dx(),
 		Height:      originalImg.Bounds().Dy(),
 		UserID:      userID,
-		Status:      "pending", // Mark as pending processing
+		Status:      "pending",
 	}
 
 	// Insert original image metadata into the database

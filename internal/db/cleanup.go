@@ -6,7 +6,11 @@ import (
 	"time"
 )
 
-// CleanupUnverifiedAccounts removes unverified accounts older than the specified duration
+// CleanupUnverifiedAccounts removes unverified accounts older than the specified duration.
+// This function connects to database and deletes user records where:
+//   - The acount is unverified (verified = false)
+//   - The account's creation date is older than the maxAge.
+// The function then returns the number of accounts that were deleted and any errors encountered.
 func CleanupUnverifiedAccounts(ctx context.Context, maxAge time.Duration) (int64, error) {
 	pool, err := GetDBPool()
 	if err != nil {
@@ -15,6 +19,7 @@ func CleanupUnverifiedAccounts(ctx context.Context, maxAge time.Duration) (int64
 
 	cutoffTime := time.Now().Add(-maxAge)
 
+	// Delete query to remove unverified accounts older than cutoff time
 	result, err := pool.Exec(ctx,
 		`DELETE FROM users
 		 WHERE verified = false

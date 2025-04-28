@@ -10,12 +10,16 @@ import (
 )
 
 var (
-	dbPool     *pgxpool.Pool
-	poolOnce   sync.Once
-	poolError  error
+	dbPool    *pgxpool.Pool // Database connection pool
+	poolOnce  sync.Once     // Makes sure database pool is only created once
+	poolError error         // Stores any error that occurs during pool creation
 )
 
-// GetDBPool returns a singleton database connection pool
+// GetDBPool returns a singleton database connection pool.
+// This function ensures that the database connection pool is created only once
+// and will return the same pool for subsequent calls.
+// It constructs a connection string from env variables and creates a connection pool
+// using the pgxpool.Connect method. If connection pool creation failes, an error is returned.
 func GetDBPool() (*pgxpool.Pool, error) {
 	poolOnce.Do(func() {
 		user := os.Getenv("POSTGRES_USER")
@@ -36,7 +40,9 @@ func GetDBPool() (*pgxpool.Pool, error) {
 	return dbPool, poolError
 }
 
-// CloseDBPool closes the database connection pool
+// CloseDBPool closes the database connection pool, releasing all connections.
+// This function should be called when the application is shutting down
+// to cleanly release the resources assocaited with the database connection pool.
 func CloseDBPool() {
 	if dbPool != nil {
 		dbPool.Close()

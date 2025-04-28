@@ -12,7 +12,7 @@ import (
 	"golang.org/x/crypto/bcrypt"
 )
 
-// CreateUser creates a new user with verification token and returns the user ID
+// Creates a new user with verification token and returns the user ID
 func CreateUser(user models.User) (string, error) {
 	pool, err := GetDBPool()
 	if err != nil {
@@ -30,7 +30,7 @@ func CreateUser(user models.User) (string, error) {
 	return userID, err
 }
 
-// GetUserByEmail retrieves a user by email
+// Retrieves a user by email address
 func GetUserByEmail(email string) (models.User, error) {
 	pool, err := GetDBPool()
 	if err != nil {
@@ -70,7 +70,7 @@ func GetUserByEmail(email string) (models.User, error) {
 	return user, nil
 }
 
-// GetUserByID retrieves a user by ID
+// Retrieves a user by their unique user ID
 func GetUserByID(userID string) (models.User, error) {
 	pool, err := GetDBPool()
 	if err != nil {
@@ -86,9 +86,8 @@ func GetUserByID(userID string) (models.User, error) {
 	return user, err
 }
 
-// VerifyUserEmail verifies a user's email with the provided token
+// Verifies a user's email with the provided token
 func VerifyUserEmail(token string) (string, error) {
-	// Debug output
 	fmt.Printf("Attempting to verify token: %s\n", token)
 
 	ctx := context.Background()
@@ -125,7 +124,6 @@ func VerifyUserEmail(token string) (string, error) {
 		return "", fmt.Errorf("database error: %v", err)
 	}
 
-	// Debug output
 	fmt.Printf("Found user with ID: %s, expiry: %v\n", userID, expiry)
 
 	// Check if token has expired
@@ -155,7 +153,7 @@ func VerifyUserEmail(token string) (string, error) {
 	return userID, nil
 }
 
-// UpdateVerificationToken updates a user's verification token
+// Updates a user's verification token and its expiry
 func UpdateVerificationToken(email string, token string, expiry time.Time) error {
 	pool, err := GetDBPool()
 	if err != nil {
@@ -180,7 +178,7 @@ func UpdateVerificationToken(email string, token string, expiry time.Time) error
 	return nil
 }
 
-// InsertImageMeta inserts image metadata and returns the generated ID
+// Inserts image metadata and returns the generated image ID
 func InsertImageMeta(ctx context.Context, meta models.ImageMeta) (string, error) {
 	pool, err := GetDBPool()
 	if err != nil {
@@ -197,7 +195,7 @@ func InsertImageMeta(ctx context.Context, meta models.ImageMeta) (string, error)
 	return imageID, err
 }
 
-// UpdateImageStatus updates the status and optionally the processed URL for an image
+// Updates the status and optionally the processed URL for an image
 func UpdateImageStatus(ctx context.Context, imageID string, status string, processedURL string) error {
 	pool, err := GetDBPool()
 	if err != nil {
@@ -210,7 +208,7 @@ func UpdateImageStatus(ctx context.Context, imageID string, status string, proce
 	return err
 }
 
-// GetImageStatus retrieves the status of an image
+// Retrieves the current status and processed URL of an image
 func GetImageStatus(ctx context.Context, imageID string) (string, string, error) {
 	pool, err := GetDBPool()
 	if err != nil {
@@ -224,7 +222,7 @@ func GetImageStatus(ctx context.Context, imageID string) (string, string, error)
 	return status, processedURL, err
 }
 
-// GetImageMetaByFileName retrieves image metadata from the database by filename
+// Retrievs image metadata based on the filename
 func GetImageMetaByFileName(ctx context.Context, fileName string) (models.ImageMeta, error) {
 	var meta models.ImageMeta
 	pool, err := GetDBPool()
@@ -241,7 +239,7 @@ func GetImageMetaByFileName(ctx context.Context, fileName string) (models.ImageM
 	return meta, err
 }
 
-// DeleteImage deletes an image from the database
+// Deletes an image from the database after verifying ownership
 func DeleteImage(imageID string, userID string) error {
 	pool, err := GetDBPool()
 	if err != nil {
@@ -265,7 +263,7 @@ func DeleteImage(imageID string, userID string) error {
 	return err
 }
 
-// VerifyImageOwnership verifies that an image belongs to a user
+// Verifies that an image belongs to a user
 func VerifyImageOwnership(imageID string, userID string) (bool, error) {
 	pool, err := GetDBPool()
 	if err != nil {
@@ -278,7 +276,7 @@ func VerifyImageOwnership(imageID string, userID string) (bool, error) {
 	return exists, err
 }
 
-// GetUserImages retrieves all images for a user
+// Retrieves all images by a specific user
 func GetUserImages(userID string) ([]models.ImageMeta, error) {
 	pool, err := GetDBPool()
 	if err != nil {
@@ -311,7 +309,7 @@ func GetUserImages(userID string) ([]models.ImageMeta, error) {
 	return images, nil
 }
 
-// CreatePasswordResetToken generates a reset token for a user and saves it to the database
+// Generates a reset token for a user and saves it to the database
 func CreatePasswordResetToken(email string) (string, error) {
 	pool, err := GetDBPool()
 	if err != nil {
@@ -346,7 +344,7 @@ func CreatePasswordResetToken(email string) (string, error) {
 	return token, nil
 }
 
-// VerifyResetToken checks if a reset token is valid and returns the user's email
+// Checks if a reset token is valid and has not expired, will return users email.
 func VerifyResetToken(token string) (string, error) {
 	pool, err := GetDBPool()
 	if err != nil {
@@ -378,7 +376,7 @@ func VerifyResetToken(token string) (string, error) {
 	return email, nil
 }
 
-// UpdatePassword updates a user's password and clears the reset token
+// Updates a user's password and clears the reset token from the database
 func UpdatePassword(email string, newPassword string) error {
 	pool, err := GetDBPool()
 	if err != nil {
@@ -403,6 +401,7 @@ func UpdatePassword(email string, newPassword string) error {
 	return err
 }
 
+// Retrievs the total number of images associated with a user
 func GetUserImageCount(userID string) (int, error) {
 	pool, err := GetDBPool()
 	if err != nil {
@@ -416,5 +415,3 @@ func GetUserImageCount(userID string) (int, error) {
 
 	return count, err
 }
-
-

@@ -4,7 +4,7 @@ import { ImageMeta } from '../../types';
 
 interface ImageUploaderProps {
     onUploadSuccess: (newImage: ImageMeta) => void;
-    currentImages?: ImageMeta[]; // Optional prop to pass current images
+    currentImages?: ImageMeta[];
 }
 
 export const ImageUploader: React.FC<ImageUploaderProps> = ({ onUploadSuccess, currentImages }) => {
@@ -114,7 +114,7 @@ export const ImageUploader: React.FC<ImageUploaderProps> = ({ onUploadSuccess, c
                 overlay.style.width = `${rect.width}px`;
                 overlay.style.height = `${rect.height}px`;
                 overlay.style.backgroundColor = tintColor;
-                overlay.style.opacity = "0.5"; // Fixed opacity at 50%
+                overlay.style.opacity = "0.5";
             }
         }
     }, [tintColor, previewSrc, tintPreview]);
@@ -271,7 +271,7 @@ export const ImageUploader: React.FC<ImageUploaderProps> = ({ onUploadSuccess, c
             // Add tint color if specified
             if (isTinting) {
                 params.tintColor = tintColor;
-                params.tintOpacity = 0.5;  // Fixed opacity at 50%
+                params.tintOpacity = 0.5;
             }
 
             console.log("Upload params:", params);
@@ -422,13 +422,12 @@ export const ImageUploader: React.FC<ImageUploaderProps> = ({ onUploadSuccess, c
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                     <div>
                         <div
-                            className={`mb-4 border-2 border-dashed rounded-lg p-6 text-center transition-all ${
-                                imageCount !== null && imageCount >= IMAGE_LIMIT
-                                    ? 'border-red-700 bg-red-900 bg-opacity-10 cursor-not-allowed'
-                                    : dragActive
-                                        ? 'border-indigo-500 bg-indigo-900 bg-opacity-20'
-                                        : 'border-gray-700 hover:border-gray-600'
-                            }`}
+                            className={`mb-4 border-2 border-dashed rounded-lg p-6 text-center transition-all ${imageCount !== null && imageCount >= IMAGE_LIMIT
+                                ? 'border-red-700 bg-red-900 bg-opacity-10 cursor-not-allowed'
+                                : dragActive
+                                    ? 'border-indigo-500 bg-indigo-900 bg-opacity-20'
+                                    : 'border-gray-700 hover:border-gray-600'
+                                }`}
                             onDragEnter={imageCount !== null && imageCount >= IMAGE_LIMIT ? undefined : handleDrag}
                             onDragOver={imageCount !== null && imageCount >= IMAGE_LIMIT ? undefined : handleDrag}
                             onDragLeave={imageCount !== null && imageCount >= IMAGE_LIMIT ? undefined : handleDrag}
@@ -525,8 +524,8 @@ export const ImageUploader: React.FC<ImageUploaderProps> = ({ onUploadSuccess, c
                                         type="button"
                                         onClick={toggleCropPreview}
                                         className={`px-3 py-1 text-xs font-medium rounded-md transition-colors ${cropPreviewVisible
-                                                ? 'bg-indigo-700 text-white'
-                                                : 'bg-gray-700 text-gray-300 hover:bg-gray-600'
+                                            ? 'bg-indigo-700 text-white'
+                                            : 'bg-gray-700 text-gray-300 hover:bg-gray-600'
                                             }`}
                                     >
                                         {cropPreviewVisible ? 'Hide Overlay' : 'Show Overlay'}
@@ -613,8 +612,8 @@ export const ImageUploader: React.FC<ImageUploaderProps> = ({ onUploadSuccess, c
                                         type="button"
                                         onClick={toggleTintPreview}
                                         className={`px-3 py-1 text-xs font-medium rounded-md transition-colors ${tintPreview
-                                                ? 'bg-indigo-700 text-white'
-                                                : 'bg-gray-700 text-gray-300 hover:bg-gray-600'
+                                            ? 'bg-indigo-700 text-white'
+                                            : 'bg-gray-700 text-gray-300 hover:bg-gray-600'
                                             }`}
                                     >
                                         {tintPreview ? 'Hide Tint Preview' : 'Show Tint Preview'}
@@ -689,15 +688,14 @@ export const ImageUploader: React.FC<ImageUploaderProps> = ({ onUploadSuccess, c
                             </div>
                         )}
 
-<div className="mt-6 flex items-center space-x-4">
+                        <div className="mt-6 flex items-center space-x-4">
                             <button
                                 type="submit"
                                 disabled={isUploading || !file || (imageCount !== null && imageCount >= IMAGE_LIMIT)}
-                                className={`px-4 py-2 rounded-md font-medium flex items-center ${
-                                    isUploading || !file || (imageCount !== null && imageCount >= IMAGE_LIMIT)
-                                        ? 'bg-gray-700 text-gray-400 cursor-not-allowed'
-                                        : 'bg-indigo-600 hover:bg-indigo-700 text-white transition-colors'
-                                }`}
+                                className={`px-4 py-2 rounded-md font-medium flex items-center ${isUploading || !file || (imageCount !== null && imageCount >= IMAGE_LIMIT)
+                                    ? 'bg-gray-700 text-gray-400 cursor-not-allowed'
+                                    : 'bg-indigo-600 hover:bg-indigo-700 text-white transition-colors'
+                                    }`}
                             >
                                 {isUploading && (
                                     <svg className="animate-spin -ml-1 mr-2 h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">

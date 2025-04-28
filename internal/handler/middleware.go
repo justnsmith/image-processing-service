@@ -10,11 +10,14 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
-// SetupMiddleware configures middleware for the application
+// SetupMiddleware sets up the middleware for the Gin router.
+// It includes CORS configuration to allow requests from specific origins
+// and sets up the authentication middleware to validate JWT tokens.
+// This function should be called after creating the Gin router instance.
 func SetupMiddleware(r *gin.Engine) {
 	// CORS middleware configuration
 	r.Use(cors.New(cors.Config{
-		AllowOrigins:     []string{"http://localhost:3000", "http://localhost:5173"}, // Update with your frontend URL
+		AllowOrigins:     []string{"http://localhost:3000", "http://localhost:5173"},
 		AllowMethods:     []string{"GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"},
 		AllowHeaders:     []string{"Origin", "Content-Type", "Accept", "Authorization"},
 		ExposeHeaders:    []string{"Content-Length"},
@@ -23,7 +26,7 @@ func SetupMiddleware(r *gin.Engine) {
 	}))
 }
 
-// AuthMiddleware checks the JWT token for authentication
+// Gin middleware function that checks for a valid JWT token
 func AuthMiddleware() gin.HandlerFunc {
 	return func(c *gin.Context) {
 		// Extract JWT token from Authorization header

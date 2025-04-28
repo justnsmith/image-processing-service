@@ -50,9 +50,6 @@ export const RegisterForm = () => {
 
         try {
             const response = await register(email, password);
-
-            // Check for properties that would indicate email verification is needed
-            // This could be a specific property in your API response or the absence of a token
             if (!response.token) {
                 // No token means verification is likely needed
                 setRegistrationSuccess(true);

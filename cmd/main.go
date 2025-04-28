@@ -17,20 +17,20 @@ import (
 	"github.com/joho/godotenv"
 )
 
+// Initalizes a periodic cleanup task to remove unverified accounts older than 48 hours.
 func scheduleCleanupTasks(ctx context.Context) {
 	ticker := time.NewTicker(24 * time.Hour)
 	go func() {
 		for {
 			select {
 			case <-ticker.C:
-				// Delete accounts older than 48 hours
 				count, err := db.CleanupUnverifiedAccounts(ctx, 48*time.Hour)
 				if err != nil {
 					log.Printf("Error cleaning up unverified accounts: %v\n", err)
 				} else {
 					log.Printf("Cleaned up %d unverified accounts\n", count)
 				}
-			case <-ctx.Done():
+			case <-ctx.Done(): // Stop cleanup when shutting down
 				log.Println("Cleanup scheduler stopping due to context cancellation")
 				ticker.Stop()
 				return
@@ -40,7 +40,7 @@ func scheduleCleanupTasks(ctx context.Context) {
 }
 
 func main() {
-	// Create a cancelable context for graceful shutdown
+	// Create a cancelable context for graceful shutdown for all goroutines
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
@@ -55,7 +55,7 @@ func main() {
 		os.Exit(0)
 	}()
 
-	// Load .env file
+	// Load environment variables from .env file
 	err := godotenv.Load()
 	if err != nil {
 		log.Println("No .env file found, proceeding with environment variables")
@@ -68,14 +68,14 @@ func main() {
 	}
 	defer db.CloseDBPool()
 
-	// Verify DB connection
+	// Verify database connection
 	err = pool.Ping(context.Background())
 	if err != nil {
 		log.Fatalf("DB ping error: %v", err)
 	}
 	log.Println("Connected to Postgres")
 
-	// Initialize database tables
+	// Initialize database tables if needed
 	err = db.InitDB()
 	if err != nil {
 		log.Printf("Warning: Database initialization error: %v", err)
@@ -94,12 +94,12 @@ func main() {
 		currentDir = "."
 	}
 
-	// Set up Gin
+	// Set up Gin router with default middleware
 	router := gin.Default()
 
 	// Enable CORS middleware with custom configuration
 	router.Use(cors.New(cors.Config{
-		AllowOrigins:     []string{"http://localhost:3000", "http://localhost:5173"}, // Update with your frontend URLs
+		AllowOrigins:     []string{"http://localhost:3000", "http://localhost:5173"},
 		AllowMethods:     []string{"GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"},
 		AllowHeaders:     []string{"Origin", "Content-Type", "Accept", "Authorization"},
 		ExposeHeaders:    []string{"Content-Length"},
@@ -116,7 +116,7 @@ func main() {
 	absDistPath := filepath.Join(currentDir, "frontend/dist")
 	router.Static("/abs-static", absDistPath)
 
-	// Root route for SPA
+	// Root route to serve the frontend SPA (single-page application)
 	router.GET("/", func(c *gin.Context) {
 		// Check if file exists
 		if _, err := os.Stat("./frontend/dist/index.html"); os.IsNotExist(err) {

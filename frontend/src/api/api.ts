@@ -1,10 +1,10 @@
 import { AuthResponse, ImageMeta, LoginRequest, RegisterRequest, UploadResponse, User } from '../types';
 import { getAuthToken } from '../utils/storage';
 
-// Dynamically determine API URL based on environment
+// API URL configuration
 const API_URL = window.location.hostname === 'localhost'
   ? 'http://localhost:8080'
-  : ''; // Empty string means use relative URLs (same domain) when deployed
+  : '';
 
 const headers = {
     'Content-Type': 'application/json',
@@ -15,6 +15,7 @@ const authHeaders = () => ({
     'Authorization': `Bearer ${getAuthToken()}`,
 });
 
+// Define the types for the API responses
 export interface EmailVerificationResponse {
     success: boolean;
     message: string;
@@ -22,6 +23,8 @@ export interface EmailVerificationResponse {
     user_id?: string;
     email?: string;
 }
+
+// API function to handle user login
 export const login = async (credentials: LoginRequest): Promise<AuthResponse> => {
     try {
         console.log(`Attempting to login with email: ${credentials.email}`);
@@ -70,6 +73,8 @@ export const login = async (credentials: LoginRequest): Promise<AuthResponse> =>
         throw error;
     }
 };
+
+// API function to handle user registration
 export const register = async (userData: RegisterRequest): Promise<AuthResponse> => {
     const response = await fetch(`${API_URL}/register`, {
         method: 'POST',
@@ -83,6 +88,7 @@ export const register = async (userData: RegisterRequest): Promise<AuthResponse>
     return response.json();
 };
 
+// API function to handle email verification
 export const verifyEmail = async (token: string): Promise<EmailVerificationResponse> => {
     console.log(`Sending verification request with token: ${token}`);
 
@@ -117,6 +123,7 @@ export const verifyEmail = async (token: string): Promise<EmailVerificationRespo
     }
 };
 
+// API function to handle email verification resend
 export const resendVerification = async (email: string): Promise<{ message: string }> => {
     const response = await fetch(`${API_URL}/resend-verification`, {
         method: 'POST',
@@ -130,6 +137,7 @@ export const resendVerification = async (email: string): Promise<{ message: stri
     return response.json();
 };
 
+// API function to handle user logout
 export const getUserProfile = async (): Promise<User> => {
     const response = await fetch(`${API_URL}/profile`, {
         method: 'GET',
@@ -142,6 +150,7 @@ export const getUserProfile = async (): Promise<User> => {
     return response.json();
 };
 
+// API function to handle user logout
 export const getUserImages = async (): Promise<{ images: ImageMeta[] }> => {
     const response = await fetch(`${API_URL}/images`, {
         method: 'GET',
@@ -154,6 +163,7 @@ export const getUserImages = async (): Promise<{ images: ImageMeta[] }> => {
     return response.json();
 };
 
+// API function to handle user logout
 export const uploadImage = async (
     file: File,
     params?: {
@@ -178,7 +188,6 @@ export const uploadImage = async (
         method: 'POST',
         headers: {
             'Authorization': `Bearer ${getAuthToken()}`,
-            // Note: Don't set Content-Type here as the browser will set it with boundary
         },
         body: formData,
     });
@@ -189,6 +198,7 @@ export const uploadImage = async (
     return response.json();
 };
 
+// API function to handle deleting an image
 export const deleteImage = async (imageId: string): Promise<void> => {
     const response = await fetch(`${API_URL}/images/${imageId}`, {
         method: 'DELETE',
@@ -200,6 +210,7 @@ export const deleteImage = async (imageId: string): Promise<void> => {
     }
 };
 
+// API function to handle getting image status
 export const getImageStatus = async (imageId: string): Promise<{ status: string, processed_url?: string }> => {
     console.log(`Checking status for image ID: ${imageId}`);
     const response = await fetch(`${API_URL}/images/${imageId}/status`, {
@@ -213,6 +224,7 @@ export const getImageStatus = async (imageId: string): Promise<{ status: string,
     return response.json();
 };
 
+// API function to handle password reset
 export const forgotPassword = async (email: string): Promise<{ message: string }> => {
     const response = await fetch(`${API_URL}/forgot-password`, {
         method: 'POST',
@@ -226,6 +238,7 @@ export const forgotPassword = async (email: string): Promise<{ message: string }
     return response.json();
 };
 
+// API function to handle password reset token verification
 export const verifyResetToken = async (token: string): Promise<{ message: string, email: string }> => {
     const response = await fetch(`${API_URL}/verify-reset-token`, {
         method: 'POST',
@@ -239,6 +252,7 @@ export const verifyResetToken = async (token: string): Promise<{ message: string
     return response.json();
 };
 
+// API function to handle password reset
 export const resetPassword = async (token: string, newPassword: string): Promise<{ message: string }> => {
     const response = await fetch(`${API_URL}/reset-password`, {
         method: 'POST',
@@ -252,6 +266,7 @@ export const resetPassword = async (token: string, newPassword: string): Promise
     return response.json();
 };
 
+// API function to handle getting user image count
 export const getUserImageCount = async (): Promise<{ count: number }> => {
     const response = await fetch(`${API_URL}/images/count`, {
       method: 'GET',

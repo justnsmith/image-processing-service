@@ -14,19 +14,18 @@ import (
 	"golang.org/x/crypto/bcrypt"
 )
 
-// LoginHandler handles login requests
+// LoginHandler handles login requests.
+// Verifies the user's email and password, checks if the account is verified,
+// and returns a JWT token on successful authentication.
 func LoginHandler(c *gin.Context) {
-	// Parse login request
 	var req models.LoginRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
 		c.JSON(400, gin.H{"error": "Invalid request"})
 		return
 	}
 
-	// Log the login attempt
 	fmt.Printf("Login attempt for email: %s\n", req.Email)
 
-	// Get user by email (the GetUserByEmail function now handles case insensitivity)
 	user, err := db.GetUserByEmail(req.Email)
 	if err != nil {
 		fmt.Printf("Login error: %v\n", err)
@@ -34,21 +33,18 @@ func LoginHandler(c *gin.Context) {
 		return
 	}
 
-	// Check password
 	if !auth.CheckPassword(user.Password, req.Password) {
 		fmt.Printf("Password mismatch for user: %s\n", user.Email)
 		c.JSON(401, gin.H{"error": "Invalid email or password"})
 		return
 	}
 
-	// Check if user is verified
 	if !user.Verified {
 		fmt.Printf("User not verified: %s\n", user.Email)
 		c.JSON(401, gin.H{"error": "Email not verified"})
 		return
 	}
 
-	// Generate JWT token
 	token, err := auth.GenerateJWT(user.ID)
 	if err != nil {
 		fmt.Printf("Failed to generate token: %v\n", err)
@@ -56,10 +52,8 @@ func LoginHandler(c *gin.Context) {
 		return
 	}
 
-	// Log successful login
 	fmt.Printf("Login successful for user: %s (ID: %s)\n", user.Email, user.ID)
 
-	// Return successful response
 	c.JSON(200, gin.H{
 		"token":   token,
 		"user_id": user.ID,
@@ -67,7 +61,9 @@ func LoginHandler(c *gin.Context) {
 	})
 }
 
-// RegisterHandler handles registration requests
+// RegisterHandler handles registration requests.
+// Validates the input, checks for existing users,
+// hashes the password, creates a new user, and sends a verification email.
 func RegisterHandler(c *gin.Context) {
 	var registerRequest models.RegisterRequest
 	if err := c.ShouldBindJSON(&registerRequest); err != nil {
@@ -75,7 +71,6 @@ func RegisterHandler(c *gin.Context) {
 		return
 	}
 
-	// Basic validation
 	if !isValidEmail(registerRequest.Email) {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid email format"})
 		return
@@ -89,7 +84,6 @@ func RegisterHandler(c *gin.Context) {
 	// Check if user already exists
 	_, err := db.GetUserByEmail(registerRequest.Email)
 	if err == nil {
-		// User exists
 		c.JSON(http.StatusConflict, gin.H{"error": "Email already registered"})
 		return
 	}
@@ -111,7 +105,7 @@ func RegisterHandler(c *gin.Context) {
 	// Create a new user in the database
 	user := models.User{
 		Email:              registerRequest.Email,
-		Password:           string(hashedPassword), // Store the hashed password
+		Password:           string(hashedPassword),
 		Verified:           false,
 		VerificationToken:  token,
 		VerificationExpiry: &expiry,
@@ -127,8 +121,6 @@ func RegisterHandler(c *gin.Context) {
 	// Send verification email
 	err = utils.SendVerificationEmail(user.Email, token, user.Email)
 	if err != nil {
-		// If email sending fails, log it but don't prevent registration
-		// In production, you might want to handle this differently
 		c.JSON(http.StatusOK, gin.H{
 			"message": "Registration successful, but could not send verification email",
 			"user_id": userID,
@@ -142,7 +134,9 @@ func RegisterHandler(c *gin.Context) {
 	})
 }
 
-// VerifyEmailHandler handles email verification requests
+// VerifyEmailHandler handles email verification requests.
+// Verifies the user's email based on provide token
+// and optionally returns a JWT token for immediate login.
 func VerifyEmailHandler(c *gin.Context) {
 	var verificationRequest models.EmailVerificationRequest
 	if err := c.ShouldBindJSON(&verificationRequest); err != nil {
@@ -150,7 +144,6 @@ func VerifyEmailHandler(c *gin.Context) {
 		return
 	}
 
-	// Log the received token for debugging
 	fmt.Printf("Received verification token: %s\n", verificationRequest.Token)
 
 	userID, err := db.VerifyUserEmail(verificationRequest.Token)
@@ -188,7 +181,8 @@ func VerifyEmailHandler(c *gin.Context) {
 	})
 }
 
-// ResendVerificationHandler handles requests to resend verification emails
+// ResendVerificationHandler handles requests to resend the verification email.
+// Checks if user exists and is not already verified before sending new verification email.
 func ResendVerificationHandler(c *gin.Context) {
 	var resendRequest models.ResendVerificationRequest
 	if err := c.ShouldBindJSON(&resendRequest); err != nil {
@@ -235,6 +229,8 @@ func ResendVerificationHandler(c *gin.Context) {
 	})
 }
 
+// Hnadles requests to delete a user's uploaded image.
+// Requires a valid authenticated user.
 func DeleteImageHandler(c *gin.Context) {
 	// Get userID from the JWT token in the context
 	userID, exists := c.Get("userID")
@@ -256,12 +252,15 @@ func DeleteImageHandler(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{"message": "Image deleted successfully"})
 }
 
-// Helper function to validate email format
+// Helper function to validate email format.
+// Uses a regular expression to check if the email is valid.
 func isValidEmail(email string) bool {
 	emailRegex := regexp.MustCompile(`^[a-z0-9._%+\-]+@[a-z0-9.\-]+\.[a-z]{2,4}$`)
 	return emailRegex.MatchString(email)
 }
 
+// Retrieves the authenticated user's profile information.
+// Requires a valid JWT token to access the user's details.
 func GetUserProfileHandler(c *gin.Context) {
 	// Get userID from the JWT token in the context
 	userID, exists := c.Get("userID")
@@ -285,7 +284,8 @@ func GetUserProfileHandler(c *gin.Context) {
 	})
 }
 
-// GetUserImagesHandler retrieves all images for the authenticated user
+// Retrieves the authenticated user's profile information.
+// Requires a valid JWT token to access the user's details.
 func GetUserImagesHandler(c *gin.Context) {
 	// Get userID from the JWT token in the context
 	userID, exists := c.Get("userID")
@@ -307,7 +307,8 @@ func GetUserImagesHandler(c *gin.Context) {
 	})
 }
 
-// GetImageStatusHandler retrieves the status of an image
+// Retrieves the status of an image.
+// Requires a valid JWT token to access the user's details.
 func GetImageStatusHandler(c *gin.Context) {
 	// Get userID from the JWT token in the context
 	userID, exists := c.Get("userID")
@@ -354,7 +355,8 @@ func GetImageStatusHandler(c *gin.Context) {
 	c.JSON(http.StatusOK, response)
 }
 
-// ForgotPasswordHandler handles requests to reset a password
+// Handles requests to reset the password.
+// Verifies the token and updates the password in the database.
 func ForgotPasswordHandler(c *gin.Context) {
 	var req models.ForgotPasswordRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
@@ -389,7 +391,8 @@ func ForgotPasswordHandler(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{"message": "Password reset link sent to your email"})
 }
 
-// VerifyResetTokenHandler verifies if a reset token is valid
+// Verifies the password reset token.
+// Checks if the token is valid and not expired.
 func VerifyResetTokenHandler(c *gin.Context) {
 	var req models.VerifyResetTokenRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
@@ -409,7 +412,8 @@ func VerifyResetTokenHandler(c *gin.Context) {
 	})
 }
 
-// ResetPasswordHandler handles setting a new password using a reset token
+// Resets the password for the user.
+// Updates the password in the database if the token is valid.
 func ResetPasswordHandler(c *gin.Context) {
 	var req models.ResetPasswordRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
@@ -440,6 +444,8 @@ func ResetPasswordHandler(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{"message": "Password has been reset successfully"})
 }
 
+// Retrieves the count of images uploaded by the user.
+// Requires a valid JWT token to access the user's details.
 func GetUserImageCountHandler(c *gin.Context) {
 	// Get userID from the JWT token in the context
 	userID, exists := c.Get("userID")

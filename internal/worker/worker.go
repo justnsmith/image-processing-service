@@ -14,6 +14,7 @@ import (
 	"time"
 )
 
+// Initializes the worker to process tasks from the queue
 func StartWorker(ctx context.Context) {
 	loggedEmptyQueue := false
 	for {
@@ -49,8 +50,8 @@ func StartWorker(ctx context.Context) {
 	}
 }
 
+// Processes the image task from the queue
 func processImageTask(ctx context.Context, task string) {
-	// Parse task parts: command:imageKey:Base64JSON:userID
 	parts := strings.SplitN(task, ":", 4)
 	if len(parts) < 4 {
 		log.Printf("Invalid task format: %s\n", task)
@@ -120,7 +121,7 @@ func processImageTask(ctx context.Context, task string) {
 	if resizeInterface, ok := options["resize"].(map[string]interface{}); ok {
 		width := getIntFromMap(resizeInterface, "width")
 		if width <= 0 {
-			width = 600 // Default width
+			width = 600
 		}
 
 		processedImg = processor.ResizeImage(processedImg, uint(width))

@@ -2,71 +2,71 @@ package models
 
 import "time"
 
-// LoginRequest represents the structure of data expected for the login API
+// Represents the structure of data expected for the login API
 type LoginRequest struct {
 	Email    string `json:"email" binding:"required,email"`
 	Password string `json:"password" binding:"required,min=8"`
 }
 
-// RegisterRequest represents the structure of data expected for the registration API
+// Represents the structure of data expected for the registration API
 type RegisterRequest struct {
 	Email    string `json:"email" binding:"required,email"`
 	Password string `json:"password" binding:"required,min=8"`
 }
 
-// User represents a user entity, which will be stored in the database
+// Represents a user entity, which will be stored in the database
 type User struct {
 	ID                string     `json:"id"`
 	Email             string     `json:"email"`
-	Password          string     `json:"password,omitempty"` // omitempty for JSON responses
+	Password          string     `json:"password,omitempty"`
 	Verified          bool       `json:"verified"`
 	VerificationToken string     `json:"verification_token,omitempty"`
 	VerificationExpiry *time.Time `json:"verification_expiry,omitempty"`
 }
 
-// VerificationResponse represents the structure of data returned for verification requests
+// Represents the structure of data returned for verification requests
 type VerificationResponse struct {
 	Success bool   `json:"success"`
 	Message string `json:"message"`
 }
 
-// EmailVerificationRequest represents a request to verify an email
+// Represents a request to verify an email
 type EmailVerificationRequest struct {
 	Token string `json:"token" binding:"required"`
 }
 
-// ResendVerificationRequest represents a request to resend verification email
+// Represents a request to resend verification email
 type ResendVerificationRequest struct {
 	Email string `json:"email" binding:"required,email"`
 }
 
-// ImageMeta represents metadata for an image
+// Represents metadata for an image
 type ImageMeta struct {
-	ID           string    `json:"id"`
-	FileName     string    `json:"file_name"`
+	ID           string    `json:"id"`            // Unique identifier for the image
+	FileName     string    `json:"file_name"`     // Original file name
 	URL          string    `json:"url"`           // URL to original image
 	S3Key        string    `json:"s3_key"`        // S3 key for the original image
-	Size         int64     `json:"size"`
-	Uploaded     time.Time `json:"uploaded"`
-	ContentType  string    `json:"content_type"`
-	Width        int       `json:"width"`
-	Height       int       `json:"height"`
-	UserID       string    `json:"user_id"`
+	Size         int64     `json:"size"`          // Size of the image in bytes
+	Uploaded     time.Time `json:"uploaded"` 	  // Timestamp when the image was uploaded
+	ContentType  string    `json:"content_type"`  // MIME type of the image
+	Width        int       `json:"width"` 		  // Width of the image in pixels
+	Height       int       `json:"height"`        // Height of the image in pixels
+	UserID       string    `json:"user_id"`       // ID of the user who uploaded the image
 	Status       string    `json:"status"`        // pending, processing, completed, failed
 	ProcessedURL string    `json:"processed_url"` // URL to processed image (if completed)
 }
 
-// ForgotPasswordRequest represents a request to reset a password
+// Represents a request to reset a password
 type ForgotPasswordRequest struct {
 	Email string `json:"email" binding:"required,email"`
 }
 
-// VerifyResetTokenRequest represents a request to verify a reset token
+// Represents a request to verify a reset token
 type VerifyResetTokenRequest struct {
 	Token string `json:"token" binding:"required"`
 }
 
-// ResetPasswordRequest represents a request to set a new password with a token
+// Represents a request to set a new password with a token
 type ResetPasswordRequest struct {
 	Token       string `json:"token" binding:"required"`
 	NewPassword string `json:"new_password" binding:"required"`

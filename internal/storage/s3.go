@@ -14,6 +14,7 @@ import (
 
 var s3Client *s3.Client
 
+// Initialize the S3 client
 func init() {
 	// Retrieve AWS credentials from environment variables
 	awsAccessKey := os.Getenv("AWS_ACCESS_KEY_ID")
@@ -51,7 +52,7 @@ func init() {
 	s3Client = s3.NewFromConfig(cfg)
 }
 
-// UploadToS3 uploads the file to S3 and returns the public URL
+// Uploads the file to S3 and returns the public URL
 func UploadToS3(ctx context.Context, key string, file []byte) (string, error) {
 	var bucketName = os.Getenv("AWS_BUCKET_NAME")
 	if bucketName == "" {
@@ -84,7 +85,7 @@ func UploadToS3(ctx context.Context, key string, file []byte) (string, error) {
 	return url, nil
 }
 
-// DownloadFromS3 downloads the file from S3 using the provided key and returns the file content as a byte slice
+// Downloads the file from S3 using the provided key and returns the file content as a byte slice
 func DownloadFromS3(ctx context.Context, key string) ([]byte, error) {
 	var bucketName = os.Getenv("AWS_BUCKET_NAME")
 	if bucketName == "" {
@@ -112,7 +113,7 @@ func DownloadFromS3(ctx context.Context, key string) ([]byte, error) {
 	return buf.Bytes(), nil
 }
 
-// detectContentType attempts to determine the content type based on file extension
+// Attempts to determine the content type based on file extension
 func detectContentType(key string) string {
 	ext := ""
 	for i := len(key) - 1; i >= 0 && key[i] != '.'; i-- {

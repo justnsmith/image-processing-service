@@ -69,7 +69,6 @@ export const LoginForm = () => {
                     <div className="pt-3 space-y-3">
                         <Button
                             onClick={() => {
-                                // Pass the email in the URL for the resend page
                                 navigate(`/resend-verification?email=${encodeURIComponent(email)}`);
                             }}
                             className="w-full py-3 bg-primary hover:bg-primary-dark transition-colors duration-200"
