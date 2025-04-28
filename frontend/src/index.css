@@ -192,3 +192,18 @@ body {
   border-radius: 0.5rem;
   margin-bottom: 1rem;
 }
+
+@keyframes draw-checkmark {
+    0% {
+      stroke-dashoffset: 100;
+    }
+    100% {
+      stroke-dashoffset: 0;
+    }
+  }
+
+  .animate-checkmark {
+    stroke-dasharray: 100;
+    stroke-dashoffset: 100;
+    animation: draw-checkmark 0.8s ease-in-out forwards;
+  }

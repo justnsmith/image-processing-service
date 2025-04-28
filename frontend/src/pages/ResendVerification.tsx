@@ -1,8 +1,13 @@
-import { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useState, useEffect } from 'react';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { resendVerification } from '../api/api';
 import { Button } from '../components/ui/Button';
 import { Input } from '../components/ui/Input';
+import { Link } from 'react-router-dom';
+
+const useQuery = () => {
+  return new URLSearchParams(useLocation().search);
+};
 
 const ResendVerification = () => {
     const [email, setEmail] = useState('');
@@ -10,12 +15,20 @@ const ResendVerification = () => {
     const [error, setError] = useState('');
     const [success, setSuccess] = useState(false);
     const navigate = useNavigate();
+    const query = useQuery();
+    const emailParam = query.get('email');
+
+    useEffect(() => {
+        // Pre-fill email from URL parameter if available
+        if (emailParam) {
+            setEmail(emailParam);
+        }
+    }, [emailParam]);
 
     const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
         e.preventDefault();
         setError('');
         setIsLoading(true);
-
         if (!email) {
             setError('Please enter your email address');
             setIsLoading(false);
@@ -34,11 +47,11 @@ const ResendVerification = () => {
 
     if (success) {
         return (
-            <div className="flex items-center justify-center min-h-screen p-6 bg-gray-900">
+            <div className="flex items-center justify-center min-h-screen w-full py-8">
                 <div className="w-full max-w-md glass-card p-8 space-y-6 shadow-lg rounded-xl">
                     <div className="text-center">
-                        <div className="mx-auto flex items-center justify-center h-16 w-16 rounded-full bg-green-100 mb-4">
-                            <svg className="h-8 w-8 text-green-600" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <div className="mx-auto flex items-center justify-center h-12 w-12 rounded-full bg-green-100 dark:bg-green-900 mb-4">
+                            <svg className="h-6 w-6 text-green-600 dark:text-green-300" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
                             </svg>
                         </div>
@@ -46,7 +59,7 @@ const ResendVerification = () => {
                         <p className="text-text-secondary mb-2">We've sent a verification link to {email}.</p>
                         <p className="text-text-secondary mb-6">Please check your inbox and click the link to verify your email address.</p>
                         <Button
-                            className="w-full bg-primary hover:bg-primary-dark"
+                            className="w-full py-3 bg-primary hover:bg-primary-dark transition-colors duration-200"
                             onClick={() => navigate('/login')}
                         >
                             Return to Login
@@ -58,7 +71,7 @@ const ResendVerification = () => {
     }
 
     return (
-        <div className="flex items-center justify-center min-h-screen p-6 bg-gray-900">
+        <div className="flex items-center justify-center min-h-screen w-full py-8">
             <div className="w-full max-w-md glass-card p-8 space-y-6 shadow-lg rounded-xl">
                 <div className="text-center">
                     <h2 className="text-2xl font-bold text-text-primary mb-1">Resend Verification Email</h2>
@@ -66,8 +79,13 @@ const ResendVerification = () => {
                 </div>
 
                 {error && (
-                    <div className="bg-red-500 bg-opacity-10 text-red-500 border border-red-500 border-opacity-30 p-3 rounded-lg text-sm">
-                        <p>{error}</p>
+                    <div className="bg-red-100 dark:bg-red-900 text-red-700 dark:text-red-200 p-4 rounded-lg text-sm flex items-center">
+                        <div className="bg-red-200 dark:bg-red-800 rounded-full p-1 mr-3">
+                            <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 text-red-600 dark:text-red-300" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                            </svg>
+                        </div>
+                        <span>{error}</span>
                     </div>
                 )}
 
@@ -105,9 +123,9 @@ const ResendVerification = () => {
                     <div className="text-center pt-3">
                         <p className="text-sm text-text-secondary">
                             Remember your password?
-                            <a href="/login" className="text-primary hover:text-primary-light ml-1 font-medium">
-                                Sign in
-                            </a>
+                            <Link to="/login" className="text-primary hover:text-indigo-400 transition-colors duration-200 ml-1 font-medium">
+                                Back to Login
+                            </Link>
                         </p>
                     </div>
                 </form>

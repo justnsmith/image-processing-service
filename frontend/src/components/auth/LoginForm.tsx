@@ -54,11 +54,11 @@ export const LoginForm = () => {
 
     if (needsVerification) {
         return (
-            <div className="flex items-center justify-center h-full w-full">
+            <div className="flex items-center justify-center min-h-screen w-full py-8">
                 <div className="w-full max-w-md glass-card p-8 space-y-6 shadow-lg rounded-xl">
                     <div className="text-center">
-                        <div className="mx-auto flex items-center justify-center h-12 w-12 rounded-full bg-yellow-100 mb-4">
-                            <svg className="h-6 w-6 text-yellow-600" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <div className="mx-auto flex items-center justify-center h-12 w-12 rounded-full bg-yellow-100 dark:bg-yellow-900 mb-4">
+                            <svg className="h-6 w-6 text-yellow-600 dark:text-yellow-300" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
                             </svg>
                         </div>
@@ -92,7 +92,7 @@ export const LoginForm = () => {
     }
 
     return (
-        <div className="flex items-center justify-center h-full w-full">
+        <div className="flex items-center justify-center min-h-screen w-full py-8">
             <div className="w-full max-w-md glass-card p-8 space-y-6 shadow-lg rounded-xl">
                 <div className="text-center">
                     <h2 className="text-2xl font-bold text-text-primary mb-1">Welcome Back</h2>
@@ -100,8 +100,13 @@ export const LoginForm = () => {
                 </div>
 
                 {error && (
-                    <div className="bg-red-500 bg-opacity-10 text-red-500 border border-red-500 border-opacity-30 p-3 rounded-lg text-sm">
-                        <p>{error}</p>
+                    <div className="bg-red-100 dark:bg-red-900 text-red-700 dark:text-red-200 p-4 rounded-lg text-sm flex items-center">
+                        <div className="bg-red-200 dark:bg-red-800 rounded-full p-1 mr-3">
+                            <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 text-red-600 dark:text-red-300" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                            </svg>
+                        </div>
+                        <span>{error}</span>
                     </div>
                 )}
 
@@ -126,7 +131,7 @@ export const LoginForm = () => {
                             <label htmlFor="password" className="block text-sm font-medium text-text-secondary">
                                 Password
                             </label>
-                            <Link to="/forgot-password" className="text-xs text-primary hover:text-primary-light">
+                            <Link to="/forgot-password" className="text-xs text-primary hover:text-indigo-400 transition-colors duration-200">
                                 Forgot password?
                             </Link>
                         </div>
@@ -159,7 +164,7 @@ export const LoginForm = () => {
                     <div className="text-center pt-3">
                         <p className="text-sm text-text-secondary">
                             Don't have an account?
-                            <Link to="/register" className="text-primary hover:text-primary-light ml-1 font-medium">
+                            <Link to="/register" className="text-primary hover:text-indigo-400 transition-colors duration-200 ml-1 font-medium">
                                 Create account
                             </Link>
                         </p>
