@@ -99,6 +99,14 @@ func main() {
 		MaxAge:           12 * time.Hour,
 	}))
 
+	// Serve static files for frontend assets first
+	router.Static("/assets", "./frontend/dist/assets")
+
+	// Root route for SPA
+	router.GET("/", func(c *gin.Context) {
+		c.File("./frontend/dist/index.html")
+	})
+
 	// Public routes for user authentication
 	router.POST("/login", handler.LoginHandler)
 	router.POST("/register", handler.RegisterHandler)
@@ -141,9 +149,6 @@ func main() {
 		// Delete image endpoint
 		authorized.DELETE("/images/:id", handler.DeleteImageHandler)
 	}
-
-	// Serve static frontend (after the route definitions)
-	router.Static("/", "./frontend/dist")
 
 	// Catch-all for SPA routing
 	router.NoRoute(func(c *gin.Context) {

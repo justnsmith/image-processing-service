@@ -1,7 +1,10 @@
 import { AuthResponse, ImageMeta, LoginRequest, RegisterRequest, UploadResponse, User } from '../types';
 import { getAuthToken } from '../utils/storage';
 
-const API_URL = 'http://localhost:8080';
+// Dynamically determine API URL based on environment
+const API_URL = window.location.hostname === 'localhost'
+  ? 'http://localhost:8080'
+  : ''; // Empty string means use relative URLs (same domain) when deployed
 
 const headers = {
     'Content-Type': 'application/json',
