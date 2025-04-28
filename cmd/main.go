@@ -99,6 +99,14 @@ func main() {
 		MaxAge:           12 * time.Hour,
 	}))
 
+	// 🛠 Serve static frontend
+	router.Static("/", "./frontend/dist")
+
+	// 🛠 Catch-all for SPA routing
+	router.NoRoute(func(c *gin.Context) {
+		c.File("./frontend/dist/index.html")
+	})
+
 	// Public routes for user authentication
 	router.POST("/login", handler.LoginHandler)
 	router.POST("/register", handler.RegisterHandler)
