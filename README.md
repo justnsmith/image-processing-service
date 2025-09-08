@@ -1,6 +1,6 @@
 # Image Processing Service
 
-A full-stack appliaction that lets users process images secruley and quickly. Features include user authentication, efficient image processing, and reliable cloud storage. The platform handles everything from upload to delivery while maintaing data integrity and providing fast retrieval times, all through an easy-to-use user interface.
+A full-stack appliaction that lets users process images securly and quickly. Features include user authentication, efficient image processing, and reliable cloud storage. The platform handles everything from upload to delivery while maintaing data integrity and providing fast retrieval times, all through an easy-to-use user interface.
 
 ## Table of Contents
 
