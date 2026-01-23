@@ -8,6 +8,8 @@ import { ImageComparisonSlider } from '../components/ui/ImageComparisonSlider';
 const Home: React.FC = () => {
     const { isAuthenticated } = useAuth();
     const [hoverEffect, setHoverEffect] = useState(false);
+    const beforeImage = 'before.jpg';
+    const afterImage = 'after.jpg';
 
     return (
         <div className="min-h-screen bg-[var(--background-dark)] text-[var(--text-primary)]">
@@ -73,8 +75,8 @@ const Home: React.FC = () => {
                                 onMouseLeave={() => setHoverEffect(false)}>
 
                                 <ImageComparisonSlider
-                                    originalImage="/images/demo-original.jpg"
-                                    processedImage="/images/demo-processed.jpg"
+                                    originalImage={beforeImage}
+                                    processedImage={afterImage}
                                     alt="Image processing demo"
                                 />
                             </div>

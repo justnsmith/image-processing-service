@@ -7,6 +7,8 @@ interface ImageComparisonSliderProps {
 }
 
 export const ImageComparisonSlider: React.FC<ImageComparisonSliderProps> = ({
+    originalImage,
+    processedImage,
     alt = "Image comparison"
 }) => {
     const [sliderPosition, setSliderPosition] = useState(50);
@@ -58,7 +60,7 @@ export const ImageComparisonSlider: React.FC<ImageComparisonSliderProps> = ({
         >
             {/* Original image (behind) */}
             <img
-                src={"/static/after.jpg"}
+                src={processedImage}
                 alt={alt}
                 className="w-full h-auto"
             />
@@ -69,7 +71,7 @@ export const ImageComparisonSlider: React.FC<ImageComparisonSliderProps> = ({
                 style={{ width: `${sliderPosition}%` }}
             >
                 <img
-                    src={"/static/before.jpg"}
+                    src={originalImage}
                     alt={alt}
                     className="w-full h-auto"
                     style={{
