@@ -3,8 +3,8 @@ package handler
 import (
 	"bytes"
 	"context"
-	"encoding/json"
 	"encoding/base64"
+	"encoding/json"
 	"fmt"
 	"image-processing-service/internal/db"
 	"image-processing-service/internal/models"

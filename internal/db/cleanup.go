@@ -10,6 +10,7 @@ import (
 // This function connects to database and deletes user records where:
 //   - The acount is unverified (verified = false)
 //   - The account's creation date is older than the maxAge.
+//
 // The function then returns the number of accounts that were deleted and any errors encountered.
 func CleanupUnverifiedAccounts(ctx context.Context, maxAge time.Duration) (int64, error) {
 	pool, err := GetDBPool()

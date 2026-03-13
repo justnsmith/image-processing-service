@@ -17,9 +17,9 @@ var secretKey []byte = []byte(os.Getenv("JWS_SECRET"))
 func GenerateJWT(userID string) (string, error) {
 	// Create the JWT claims
 	claims := &jwt.RegisteredClaims{
-		Subject:   userID, // user ID to associate with the JWT
+		Subject:   userID,                                             // user ID to associate with the JWT
 		ExpiresAt: jwt.NewNumericDate(time.Now().Add(24 * time.Hour)), // Token expiration time
-		IssuedAt:  jwt.NewNumericDate(time.Now()), // Set issue time to current time
+		IssuedAt:  jwt.NewNumericDate(time.Now()),                     // Set issue time to current time
 	}
 
 	// Create the token with signing method and claims

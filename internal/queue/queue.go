@@ -3,8 +3,8 @@ package queue
 
 import (
 	"context"
-	"os"
 	"github.com/redis/go-redis/v9"
+	"os"
 )
 
 var Rdb *redis.Client

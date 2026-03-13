@@ -1,0 +1,88 @@
+name: Lint & Format
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  go-lint:
+    name: Go Lint & Format
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+          cache: true
+
+      - name: Check gofmt formatting
+        run: |
+          unformatted=$(gofmt -l .)
+          if [ -n "$unformatted" ]; then
+            echo "The following files are not gofmt-formatted:"
+            echo "$unformatted"
+            echo ""
+            echo "Run 'gofmt -w .' to fix."
+            exit 1
+          fi
+
+      - name: Run go vet
+        run: go vet ./...
+
+  cpp-lint:
+    name: C++ Lint & Format
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install cppcheck and clang-format
+        run: sudo apt-get update -qq && sudo apt-get install -y cppcheck clang-format
+
+      - name: Find C++ files
+        id: cpp-files
+        run: |
+          files=$(find . \( -name "*.cpp" -o -name "*.cc" -o -name "*.cxx" -o -name "*.h" -o -name "*.hpp" \) \
+            ! -path "*/node_modules/*" ! -path "*/vendor/*" ! -path "*/.git/*")
+          if [ -z "$files" ]; then
+            echo "found=false" >> "$GITHUB_OUTPUT"
+            echo "No C++ files found — skipping C++ checks."
+          else
+            echo "found=true" >> "$GITHUB_OUTPUT"
+            echo "C++ files found:"
+            echo "$files"
+          fi
+
+      - name: Run cppcheck
+        if: steps.cpp-files.outputs.found == 'true'
+        run: |
+          find . \( -name "*.cpp" -o -name "*.cc" -o -name "*.cxx" -o -name "*.h" -o -name "*.hpp" \) \
+            ! -path "*/node_modules/*" ! -path "*/vendor/*" ! -path "*/.git/*" \
+            | xargs cppcheck \
+              --enable=warning,style,performance,portability \
+              --error-exitcode=1 \
+              --suppress=missingIncludeSystem \
+              --inline-suppr \
+              --quiet
+
+      - name: Check clang-format formatting
+        if: steps.cpp-files.outputs.found == 'true'
+        run: |
+          unformatted=""
+          while IFS= read -r -d '' f; do
+            if ! clang-format --dry-run --Werror "$f" 2>/dev/null; then
+              unformatted="$unformatted $f"
+            fi
+          done < <(find . \( -name "*.cpp" -o -name "*.cc" -o -name "*.cxx" -o -name "*.h" -o -name "*.hpp" \) \
+            ! -path "*/node_modules/*" ! -path "*/vendor/*" ! -path "*/.git/*" -print0)
+
+          if [ -n "$unformatted" ]; then
+            echo "The following files are not clang-format-formatted:"
+            for f in $unformatted; do echo "  $f"; done
+            echo ""
+            echo "Run 'clang-format -i <file>' to fix."
+            exit 1
+          fi

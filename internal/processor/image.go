@@ -73,46 +73,46 @@ func CropImage(img image.Image, x, y, width, height int) image.Image {
 
 // Applies a color tint to the image with intensity control
 func AddTint(img image.Image, tintColor color.Color) image.Image {
-    bounds := img.Bounds()
-    newImg := image.NewRGBA(bounds)
+	bounds := img.Bounds()
+	newImg := image.NewRGBA(bounds)
 
-    // Get tint color components (16-bit values)
-    tintR, tintG, tintB, _ := tintColor.RGBA()
+	// Get tint color components (16-bit values)
+	tintR, tintG, tintB, _ := tintColor.RGBA()
 
-    // Convert to 0-1 range for easier blending
-    tR := float64(tintR) / 65535.0
-    tG := float64(tintG) / 65535.0
-    tB := float64(tintB) / 65535.0
+	// Convert to 0-1 range for easier blending
+	tR := float64(tintR) / 65535.0
+	tG := float64(tintG) / 65535.0
+	tB := float64(tintB) / 65535.0
 
-    // Tint intensity (0.0 - 1.0)
-    intensity := 0.3
+	// Tint intensity (0.0 - 1.0)
+	intensity := 0.3
 
-    for y := bounds.Min.Y; y < bounds.Max.Y; y++ {
-        for x := bounds.Min.X; x < bounds.Max.X; x++ {
-            origColor := img.At(x, y)
-            r, g, b, a := origColor.RGBA()
+	for y := bounds.Min.Y; y < bounds.Max.Y; y++ {
+		for x := bounds.Min.X; x < bounds.Max.X; x++ {
+			origColor := img.At(x, y)
+			r, g, b, a := origColor.RGBA()
 
-            // Convert original to 0-1 range
-            oR := float64(r) / 65535.0
-            oG := float64(g) / 65535.0
-            oB := float64(b) / 65535.0
+			// Convert original to 0-1 range
+			oR := float64(r) / 65535.0
+			oG := float64(g) / 65535.0
+			oB := float64(b) / 65535.0
 
-            // Blend original with tint
-            blendR := oR*(1-intensity) + tR*intensity
-            blendG := oG*(1-intensity) + tG*intensity
-            blendB := oB*(1-intensity) + tB*intensity
+			// Blend original with tint
+			blendR := oR*(1-intensity) + tR*intensity
+			blendG := oG*(1-intensity) + tG*intensity
+			blendB := oB*(1-intensity) + tB*intensity
 
-            // Convert back to 8-bit color
-            newColor := color.RGBA{
-                R: uint8(blendR * 255),
-                G: uint8(blendG * 255),
-                B: uint8(blendB * 255),
-                A: uint8(a / 256),
-            }
-            newImg.Set(x, y, newColor)
-        }
-    }
-    return newImg
+			// Convert back to 8-bit color
+			newColor := color.RGBA{
+				R: uint8(blendR * 255),
+				G: uint8(blendG * 255),
+				B: uint8(blendB * 255),
+				A: uint8(a / 256),
+			}
+			newImg.Set(x, y, newColor)
+		}
+	}
+	return newImg
 }
 
 // Converts a hex color string to color.RGBA
