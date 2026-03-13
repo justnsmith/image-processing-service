@@ -2,7 +2,6 @@ package handler
 
 import (
 	"context"
-	"fmt"
 	"image-processing-service/internal/auth"
 	"image-processing-service/internal/db"
 	"image-processing-service/internal/models"
@@ -24,35 +23,27 @@ func LoginHandler(c *gin.Context) {
 		return
 	}
 
-	fmt.Printf("Login attempt for email: %s\n", req.Email)
-
 	user, err := db.GetUserByEmail(req.Email)
 	if err != nil {
-		fmt.Printf("Login error: %v\n", err)
 		c.JSON(401, gin.H{"error": "Invalid email or password"})
 		return
 	}
 
 	if !auth.CheckPassword(user.Password, req.Password) {
-		fmt.Printf("Password mismatch for user: %s\n", user.Email)
 		c.JSON(401, gin.H{"error": "Invalid email or password"})
 		return
 	}
 
 	if !user.Verified {
-		fmt.Printf("User not verified: %s\n", user.Email)
 		c.JSON(401, gin.H{"error": "Email not verified"})
 		return
 	}
 
 	token, err := auth.GenerateJWT(user.ID)
 	if err != nil {
-		fmt.Printf("Failed to generate token: %v\n", err)
 		c.JSON(500, gin.H{"error": "Failed to generate token"})
 		return
 	}
-
-	fmt.Printf("Login successful for user: %s (ID: %s)\n", user.Email, user.ID)
 
 	c.JSON(200, gin.H{
 		"token":   token,
@@ -144,11 +135,8 @@ func VerifyEmailHandler(c *gin.Context) {
 		return
 	}
 
-	fmt.Printf("Received verification token: %s\n", verificationRequest.Token)
-
 	userID, err := db.VerifyUserEmail(verificationRequest.Token)
 	if err != nil {
-		fmt.Printf("Error verifying email: %s\n", err.Error())
 		c.JSON(http.StatusBadRequest, gin.H{"success": false, "message": err.Error()})
 		return
 	}
@@ -375,7 +363,6 @@ func ForgotPasswordHandler(c *gin.Context) {
 	// Generate reset token
 	token, err := db.CreatePasswordResetToken(user.Email)
 	if err != nil {
-		fmt.Printf("Error creating reset token: %v\n", err)
 		c.JSON(http.StatusOK, gin.H{"message": "If your email exists in our system, you will receive a password reset link"})
 		return
 	}
@@ -383,7 +370,6 @@ func ForgotPasswordHandler(c *gin.Context) {
 	// Send reset email
 	err = utils.SendPasswordResetEmail(user.Email, token)
 	if err != nil {
-		fmt.Printf("Error sending reset email: %v\n", err)
 		c.JSON(http.StatusOK, gin.H{"message": "If your email exists in our system, you will receive a password reset link"})
 		return
 	}
