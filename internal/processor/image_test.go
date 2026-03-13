@@ -257,7 +257,7 @@ func TestAddTint_DoesNotChangeBlackToWhite(t *testing.T) {
 
 func TestParseHexColor_Valid(t *testing.T) {
 	tests := []struct {
-		input        string
+		input               string
 		wantR, wantG, wantB uint8
 	}{
 		{"#ff0000", 255, 0, 0},
