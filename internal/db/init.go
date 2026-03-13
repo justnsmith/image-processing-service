@@ -3,7 +3,7 @@ package db
 import (
 	"context"
 	"fmt"
-	"log"
+	"log/slog"
 	"os"
 	"path/filepath"
 )
@@ -43,6 +43,6 @@ func InitDB() error {
 		return fmt.Errorf("failed to execute schema: %w", err)
 	}
 
-	log.Println("Database initialized successfully")
+	slog.Info("database initialized")
 	return nil
 }

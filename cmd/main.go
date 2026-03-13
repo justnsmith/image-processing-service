@@ -4,8 +4,9 @@ import (
 	"context"
 	"image-processing-service/internal/db"
 	"image-processing-service/internal/handler"
+	"image-processing-service/internal/logger"
 	"image-processing-service/internal/worker"
-	"log"
+	"log/slog"
 	"os"
 	"os/signal"
 	"path/filepath"
@@ -26,12 +27,12 @@ func scheduleCleanupTasks(ctx context.Context) {
 			case <-ticker.C:
 				count, err := db.CleanupUnverifiedAccounts(ctx, 48*time.Hour)
 				if err != nil {
-					log.Printf("Error cleaning up unverified accounts: %v\n", err)
+					slog.Error("cleanup failed", "error", err)
 				} else {
-					log.Printf("Cleaned up %d unverified accounts\n", count)
+					slog.Info("cleaned up unverified accounts", "count", count)
 				}
-			case <-ctx.Done(): // Stop cleanup when shutting down
-				log.Println("Cleanup scheduler stopping due to context cancellation")
+			case <-ctx.Done():
+				slog.Info("cleanup scheduler stopping")
 				ticker.Stop()
 				return
 			}
@@ -40,6 +41,9 @@ func scheduleCleanupTasks(ctx context.Context) {
 }
 
 func main() {
+	// Initialize structured logger before anything else
+	logger.Init()
+
 	// Create a cancelable context for graceful shutdown for all goroutines
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
@@ -49,36 +53,35 @@ func main() {
 	signal.Notify(sigs, syscall.SIGINT, syscall.SIGTERM)
 	go func() {
 		<-sigs
-		log.Println("Shutdown signal received")
+		slog.Info("shutdown signal received")
 		cancel()                    // Cancel context to notify all goroutines
 		time.Sleep(3 * time.Second) // Give processes time to clean up
 		os.Exit(0)
 	}()
 
 	// Load environment variables from .env file
-	err := godotenv.Load()
-	if err != nil {
-		log.Println("No .env file found, proceeding with environment variables")
+	if err := godotenv.Load(); err != nil {
+		slog.Info("no .env file found, using environment variables")
 	}
 
 	// Initialize database connection pool
 	pool, err := db.GetDBPool()
 	if err != nil {
-		log.Fatalf("DB connection error: %v", err)
+		slog.Error("DB connection failed", "error", err)
+		os.Exit(1)
 	}
 	defer db.CloseDBPool()
 
 	// Verify database connection
-	err = pool.Ping(context.Background())
-	if err != nil {
-		log.Fatalf("DB ping error: %v", err)
+	if err = pool.Ping(context.Background()); err != nil {
+		slog.Error("DB ping failed", "error", err)
+		os.Exit(1)
 	}
-	log.Println("Connected to Postgres")
+	slog.Info("connected to postgres")
 
 	// Initialize database tables if needed
-	err = db.InitDB()
-	if err != nil {
-		log.Printf("Warning: Database initialization error: %v", err)
+	if err = db.InitDB(); err != nil {
+		slog.Warn("database initialization error", "error", err)
 	}
 
 	// Start worker in a separate Go routine to handle background tasks
@@ -90,7 +93,7 @@ func main() {
 	// Get current working directory for absolute paths
 	currentDir, err := os.Getwd()
 	if err != nil {
-		log.Printf("Warning: Unable to get current working directory: %v", err)
+		slog.Warn("unable to get working directory", "error", err)
 		currentDir = "."
 	}
 
@@ -119,9 +122,8 @@ func main() {
 
 	// Root route to serve the frontend SPA (single-page application)
 	router.GET("/", func(c *gin.Context) {
-		// Check if file exists
 		if _, err := os.Stat("./frontend/dist/index.html"); os.IsNotExist(err) {
-			log.Println("ERROR: Frontend file ./frontend/dist/index.html not found!")
+			slog.Error("frontend index.html not found")
 			c.String(404, "Frontend files not found. Build may be incomplete.")
 			return
 		}
@@ -185,9 +187,9 @@ func main() {
 		port = "8080" // Default port
 	}
 
-	log.Printf("Server started on :%s", port)
-	err = router.Run(":" + port)
-	if err != nil {
-		log.Fatalf("Gin server error: %v", err)
+	slog.Info("server started", "port", port)
+	if err = router.Run(":" + port); err != nil {
+		slog.Error("server error", "error", err)
+		os.Exit(1)
 	}
 }

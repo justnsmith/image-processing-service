@@ -46,7 +46,6 @@ func GetUserByEmail(email string) (models.User, error) {
 	).Scan(&user.ID, &user.Email, &user.Password, &user.Verified)
 
 	if err != nil {
-		fmt.Printf("Login error: %v\n", err)
 		return models.User{}, err
 	}
 
@@ -88,8 +87,6 @@ func GetUserByID(userID string) (models.User, error) {
 
 // Verifies a user's email with the provided token
 func VerifyUserEmail(token string) (string, error) {
-	fmt.Printf("Attempting to verify token: %s\n", token)
-
 	ctx := context.Background()
 	pool, err := GetDBPool()
 	if err != nil {
@@ -124,8 +121,6 @@ func VerifyUserEmail(token string) (string, error) {
 		return "", fmt.Errorf("database error: %v", err)
 	}
 
-	fmt.Printf("Found user with ID: %s, expiry: %v\n", userID, expiry)
-
 	// Check if token has expired
 	if time.Now().After(expiry) {
 		return "", fmt.Errorf("verification token has expired")
@@ -149,7 +144,6 @@ func VerifyUserEmail(token string) (string, error) {
 		return "", fmt.Errorf("failed to commit transaction: %v", err)
 	}
 
-	fmt.Printf("Successfully verified email for user ID: %s\n", userID)
 	return userID, nil
 }
 

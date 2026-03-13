@@ -9,7 +9,7 @@ import (
 	"image-processing-service/internal/processor"
 	"image-processing-service/internal/queue"
 	"image-processing-service/internal/storage"
-	"log"
+	"log/slog"
 	"strings"
 	"time"
 )
@@ -20,7 +20,7 @@ func StartWorker(ctx context.Context) {
 	for {
 		select {
 		case <-ctx.Done():
-			log.Println("Worker stopping due to context cancellation")
+			slog.Info("worker stopping")
 			return
 		default:
 			// Dequeue task
@@ -30,7 +30,7 @@ func StartWorker(ctx context.Context) {
 				if err.Error() == "redis: nil" {
 					// Only log once if queue is empty
 					if !loggedEmptyQueue {
-						log.Println("Queue is empty. Waiting for tasks...")
+						slog.Info("queue is empty, waiting for tasks")
 						loggedEmptyQueue = true
 					}
 					// Sleep and check again
@@ -38,13 +38,13 @@ func StartWorker(ctx context.Context) {
 					continue
 				}
 				// If some other error occurs, log it and continue
-				log.Printf("Error dequeuing task: %v\n", err)
+				slog.Error("error dequeuing task", "error", err)
 				time.Sleep(5 * time.Second)
 				continue
 			}
 			// Task found, process it
 			loggedEmptyQueue = false
-			log.Printf("Processing task: %s\n", task)
+			slog.Info("processing task", "task", task)
 			processImageTask(ctx, task)
 		}
 	}
@@ -54,7 +54,7 @@ func StartWorker(ctx context.Context) {
 func processImageTask(ctx context.Context, task string) {
 	parts := strings.SplitN(task, ":", 4)
 	if len(parts) < 4 {
-		log.Printf("Invalid task format: %s\n", task)
+		slog.Error("invalid task format", "task", task)
 		return
 	}
 
@@ -65,43 +65,41 @@ func processImageTask(ctx context.Context, task string) {
 
 	// Only process "process" commands
 	if command != "process" {
-		log.Printf("Unknown command: %s\n", task)
+		slog.Error("unknown command", "command", command)
 		return
 	}
 
 	// Decode the Base64 JSON options
 	jsonBytes, err := base64.StdEncoding.DecodeString(encodedOptions)
 	if err != nil {
-		log.Printf("Error decoding options: %v\n", err)
+		slog.Error("error decoding task options", "error", err)
 		return
 	}
 
 	// Parse the JSON options
 	var options map[string]interface{}
-	err = json.Unmarshal(jsonBytes, &options)
-	if err != nil {
-		log.Printf("Error parsing options: %v\n", err)
+	if err = json.Unmarshal(jsonBytes, &options); err != nil {
+		slog.Error("error parsing task options", "error", err)
 		return
 	}
 
 	// Get the image ID from options
 	imageID, ok := options["imageID"].(string)
 	if !ok {
-		log.Printf("Missing imageID in options\n")
+		slog.Error("missing imageID in task options")
 		return
 	}
 
 	// Update status to "processing"
-	err = db.UpdateImageStatus(ctx, imageID, "processing", "")
-	if err != nil {
-		log.Printf("Error updating image status: %v\n", err)
+	if err = db.UpdateImageStatus(ctx, imageID, "processing", ""); err != nil {
+		slog.Error("error updating image status", "image_id", imageID, "error", err)
 		return
 	}
 
 	// Download the original image from S3
 	imgBuf, err := storage.DownloadFromS3(ctx, imageKey)
 	if err != nil {
-		log.Printf("Error downloading image: %v\n", err)
+		slog.Error("error downloading image", "image_id", imageID, "key", imageKey, "error", err)
 		db.UpdateImageStatus(ctx, imageID, "failed", "")
 		return
 	}
@@ -109,7 +107,7 @@ func processImageTask(ctx context.Context, task string) {
 	// Decode the image
 	img, _, err := processor.DecodeImage(imgBuf)
 	if err != nil {
-		log.Printf("Error decoding image: %v\n", err)
+		slog.Error("error decoding image", "image_id", imageID, "error", err)
 		db.UpdateImageStatus(ctx, imageID, "failed", "")
 		return
 	}
@@ -123,9 +121,8 @@ func processImageTask(ctx context.Context, task string) {
 		if width <= 0 {
 			width = 600
 		}
-
 		processedImg = processor.ResizeImage(processedImg, uint(width))
-		log.Printf("Applied resizing: width=%d\n", width)
+		slog.Info("applied resize", "image_id", imageID, "width", width)
 	}
 
 	// Apply crop if specified
@@ -137,7 +134,7 @@ func processImageTask(ctx context.Context, task string) {
 
 		if width > 0 && height > 0 {
 			processedImg = processor.CropImage(processedImg, x, y, width, height)
-			log.Printf("Applied cropping: x=%d, y=%d, width=%d, height=%d\n", x, y, width, height)
+			slog.Info("applied crop", "image_id", imageID, "x", x, "y", y, "width", width, "height", height)
 		}
 	}
 
@@ -146,16 +143,16 @@ func processImageTask(ctx context.Context, task string) {
 		tintColor, err := processor.ParseHexColor(tintHex)
 		if err == nil {
 			processedImg = processor.AddTint(processedImg, tintColor)
-			log.Printf("Applied tint: %s\n", tintHex)
+			slog.Info("applied tint", "image_id", imageID, "color", tintHex)
 		} else {
-			log.Printf("Invalid tint color: %s\n", tintHex)
+			slog.Warn("invalid tint color", "image_id", imageID, "color", tintHex)
 		}
 	}
 
 	// Compress the processed image
 	processedImgBuf, err := processor.CompressJPEG(processedImg, 85)
 	if err != nil {
-		log.Printf("Error compressing image: %v\n", err)
+		slog.Error("error compressing image", "image_id", imageID, "error", err)
 		db.UpdateImageStatus(ctx, imageID, "failed", "")
 		return
 	}
@@ -164,19 +161,18 @@ func processImageTask(ctx context.Context, task string) {
 	processedKey := fmt.Sprintf("processed/%s_%d.jpg", strings.TrimPrefix(imageKey, "originals/"), time.Now().Unix())
 	processedURL, err := storage.UploadToS3(ctx, processedKey, processedImgBuf)
 	if err != nil {
-		log.Printf("Error uploading processed image: %v\n", err)
+		slog.Error("error uploading processed image", "image_id", imageID, "error", err)
 		db.UpdateImageStatus(ctx, imageID, "failed", "")
 		return
 	}
 
 	// Update the image status to completed with the processed URL
-	err = db.UpdateImageStatus(ctx, imageID, "completed", processedURL)
-	if err != nil {
-		log.Printf("Error updating image status: %v\n", err)
+	if err = db.UpdateImageStatus(ctx, imageID, "completed", processedURL); err != nil {
+		slog.Error("error updating image status to completed", "image_id", imageID, "error", err)
 		return
 	}
 
-	log.Printf("Successfully processed image %s for user %s\n", imageID, userID)
+	slog.Info("image processed successfully", "image_id", imageID, "user_id", userID)
 }
 
 // Helper function to extract integers from map with different possible types

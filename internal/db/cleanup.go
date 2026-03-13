@@ -2,7 +2,7 @@ package db
 
 import (
 	"context"
-	"log"
+	"log/slog"
 	"time"
 )
 
@@ -32,6 +32,6 @@ func CleanupUnverifiedAccounts(ctx context.Context, maxAge time.Duration) (int64
 	}
 
 	count := result.RowsAffected()
-	log.Printf("Cleaned up %d unverified accounts older than %v", count, maxAge)
+	slog.Info("cleaned up unverified accounts", "count", count, "max_age", maxAge)
 	return count, nil
 }
