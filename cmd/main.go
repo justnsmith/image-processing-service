@@ -127,6 +127,9 @@ func main() {
 		c.File("./frontend/dist/index.html")
 	})
 
+	// Health check
+	router.GET("/health", handler.HealthHandler)
+
 	// Public routes for user authentication
 	router.POST("/login", handler.LoginHandler)
 	router.POST("/register", handler.RegisterHandler)
