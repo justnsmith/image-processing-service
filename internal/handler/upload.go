@@ -22,6 +22,8 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
+const MaxFileSize = 10 * 1024 * 1024 // 10 MB
+
 // Handles the image upload and processing request.
 // It receives the image file, processes it, and stores it in S3
 // while also inserting metadata into the database.
@@ -32,6 +34,11 @@ func UploadImageHandler(c *gin.Context, userID string) {
 	fileHeader, err := c.FormFile("file")
 	if err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "No file uploaded"})
+		return
+	}
+
+	if fileHeader.Size > MaxFileSize {
+		c.JSON(http.StatusRequestEntityTooLarge, gin.H{"error": "File exceeds the 10 MB size limit"})
 		return
 	}
 

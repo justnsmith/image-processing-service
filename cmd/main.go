@@ -96,6 +96,7 @@ func main() {
 
 	// Set up Gin router with default middleware
 	router := gin.Default()
+	router.MaxMultipartMemory = handler.MaxFileSize
 
 	// Enable CORS middleware with custom configuration
 	router.Use(cors.New(cors.Config{

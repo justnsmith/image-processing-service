@@ -27,6 +27,8 @@ export const ImageUploader: React.FC<ImageUploaderProps> = ({ onUploadSuccess, c
     const [isLoadingCount, setIsLoadingCount] = useState(false);
 
     const IMAGE_LIMIT = 20; // Define the maximum number of images allowed
+    const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10 MB — must match handler.MaxFileSize on the backend
+    const MAX_FILE_SIZE_LABEL = '10 MB';
 
     const fileInputRef = useRef<HTMLInputElement>(null);
     const imagePreviewRef = useRef<HTMLImageElement>(null);
@@ -135,6 +137,13 @@ export const ImageUploader: React.FC<ImageUploaderProps> = ({ onUploadSuccess, c
 
         if (e.target.files && e.target.files[0]) {
             const selectedFile = e.target.files[0];
+
+            if (selectedFile.size > MAX_FILE_SIZE) {
+                setError(`File is too large. Maximum size is ${MAX_FILE_SIZE_LABEL}.`);
+                e.target.value = '';
+                return;
+            }
+
             setFile(selectedFile);
 
             const reader = new FileReader();
@@ -185,6 +194,11 @@ export const ImageUploader: React.FC<ImageUploaderProps> = ({ onUploadSuccess, c
         if (e.dataTransfer.files && e.dataTransfer.files[0]) {
             const droppedFile = e.dataTransfer.files[0];
             if (droppedFile.type.startsWith('image/')) {
+                if (droppedFile.size > MAX_FILE_SIZE) {
+                    setError(`File is too large. Maximum size is ${MAX_FILE_SIZE_LABEL}.`);
+                    return;
+                }
+
                 setFile(droppedFile);
 
                 const reader = new FileReader();
@@ -462,7 +476,7 @@ export const ImageUploader: React.FC<ImageUploaderProps> = ({ onUploadSuccess, c
                                         </button>
                                     </p>
                                 )}
-                                <p className="text-gray-500 text-sm">PNG, JPG, GIF up to 10MB</p>
+                                <p className="text-gray-500 text-sm">PNG, JPG, GIF up to {MAX_FILE_SIZE_LABEL}</p>
                             </div>
                         </div>
 
